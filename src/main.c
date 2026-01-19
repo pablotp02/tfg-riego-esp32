@@ -1,5 +1,6 @@
 #include "fsm.h"
 
+// comentario para probar el commit
 void app_main(void)
 {
     system_ctx_t ctx;
