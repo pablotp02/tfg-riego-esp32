@@ -1,4 +1,5 @@
 #include "fsm.h"
+#include "config.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -18,15 +19,6 @@
 
 static const char *TAG = "TFG_RIEGO";
 
-// Configuración provisional (luego se parametriza)
-#define MEASURE_PERIOD_MS   (5000)   // cada 5 s (para pruebas). Luego: horas.
-#define IRRIGATE_TIME_MS    (2000)   // riego simulado 2 s
-#define SOIL_THRESHOLD_PCT  (45.0f)  // umbral provisional (luego por planta)
-
-// Planificación por ciclos (modo demo)
-#define MEASURE_EVERY_N_CYCLES  (1)
-#define SEND_EVERY_N_CYCLES     (3)
-
 static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out)
 {
     if (d->soil_moisture_pct < SOIL_MIN_PCT || d->soil_moisture_pct > SOIL_MAX_PCT) {
@@ -45,9 +37,9 @@ static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out
     return true;
 }
 
-static bool decide_irrigation(const sensor_data_t *d)
+static bool decide_irrigation(const sensor_data_t *d, float soil_threshold_pct)
 {
-    return (d->soil_moisture_pct < SOIL_THRESHOLD_PCT);
+    return (d->soil_moisture_pct < soil_threshold_pct);
 }
 
 void fsm_init(system_ctx_t *ctx)
@@ -68,10 +60,20 @@ void fsm_init(system_ctx_t *ctx)
 
 void fsm_step(system_ctx_t *ctx)
 {
+    const system_config_t *cfg = config_get();
+
     switch (ctx->state)
     {
     case STATE_INIT:
         ESP_LOGI(TAG, "[INIT] Inicializando sistema...");
+        
+        ESP_LOGI(TAG, "[CFG] period=%lums irrig=%lums measure_n=%lu send_n=%lu soil_thr=%.1f%%",
+            (unsigned long)cfg->measure_period_ms,
+            (unsigned long)cfg->irrigate_time_ms,
+            (unsigned long)cfg->measure_every_n_cycles,
+            (unsigned long)cfg->send_every_n_cycles,
+            cfg->soil_threshold_pct);
+
         // Aquí iría: NVS, config, GPIO, etc.
         ctx->state = STATE_SCHEDULE;
         break;
@@ -85,12 +87,12 @@ void fsm_step(system_ctx_t *ctx)
                  (unsigned long)ctx->cycles_since_send,
                  ctx->pending_send ? "SI" : "NO");
 
-        if (ctx->cycles_since_send >= SEND_EVERY_N_CYCLES) {
+        if (ctx->cycles_since_send >= cfg->send_every_n_cycles) {
             ctx->cycles_since_send = 0;
             ctx->pending_send = true;
         }
 
-        if (ctx->cycles_since_measure >= MEASURE_EVERY_N_CYCLES) {
+        if (ctx->cycles_since_measure >= cfg->measure_every_n_cycles) {
             ctx->cycles_since_measure = 0;
             ctx->state = STATE_MEASURE;
         } else if (ctx->pending_send) {
@@ -123,15 +125,17 @@ void fsm_step(system_ctx_t *ctx)
         break;
 
     case STATE_DECIDE:
-        ctx->irrigate_request = decide_irrigation(&ctx->last);
+        ctx->irrigate_request = decide_irrigation(&ctx->last, cfg->soil_threshold_pct);
+
         ESP_LOGI(TAG, "[DECIDE] Umbral suelo=%.1f%% -> riego=%s",
-                 SOIL_THRESHOLD_PCT,
-                 ctx->irrigate_request ? "SI" : "NO");
+                cfg->soil_threshold_pct,
+                ctx->irrigate_request ? "SI" : "NO");
+
         ctx->state = ctx->irrigate_request ? STATE_IRRIGATE : STATE_LOG;
         break;
 
     case STATE_IRRIGATE:
-        actuators_irrigate(IRRIGATE_TIME_MS);
+        actuators_irrigate(cfg->irrigate_time_ms);
         ctx->state = STATE_LOG;
         break;
 
@@ -152,8 +156,9 @@ void fsm_step(system_ctx_t *ctx)
         break;
 
     case STATE_SLEEP:
-        ESP_LOGI(TAG, "[SLEEP] Esperando siguiente ciclo (%d ms)...", MEASURE_PERIOD_MS);
-        vTaskDelay(pdMS_TO_TICKS(MEASURE_PERIOD_MS));
+        ESP_LOGI(TAG, "[SLEEP] Esperando siguiente ciclo (%lu ms)...",
+                (unsigned long)cfg->measure_period_ms);
+        vTaskDelay(pdMS_TO_TICKS(cfg->measure_period_ms));
         ctx->state = STATE_SCHEDULE;
         break;
 
