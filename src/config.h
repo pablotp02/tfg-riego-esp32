@@ -1,7 +1,10 @@
 #pragma once
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct {
+    bool use_simulated_sensors;     // true: simulación | false: ADC real
+    
     // Temporización (demo)
     uint32_t measure_period_ms;     // tiempo entre ciclos (demo). Luego: horas
     uint32_t irrigate_time_ms;      // tiempo de riego

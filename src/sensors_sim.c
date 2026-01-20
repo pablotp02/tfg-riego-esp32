@@ -1,7 +1,13 @@
 #include "sensors.h"
 #include "esp_random.h"
 
-sensor_data_t sensors_read(void)
+bool sensors_sim_init(void)
+{
+    // En simulación no hay nada que inicializar
+    return true;
+}
+
+sensor_data_t sensors_sim_read(void)
 {
     uint32_t r1 = esp_random();
     uint32_t r2 = esp_random();

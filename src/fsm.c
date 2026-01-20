@@ -74,6 +74,14 @@ void fsm_step(system_ctx_t *ctx)
             (unsigned long)cfg->send_every_n_cycles,
             cfg->soil_threshold_pct);
 
+        if (!sensors_init())
+        {
+            ctx->sensor_valid = false;
+            ctx->error_reason = "Fallo en sensores_init()";
+            ctx->state = STATE_ERROR;
+            break;
+        }
+
         // Aquí iría: NVS, config, GPIO, etc.
         ctx->state = STATE_SCHEDULE;
         break;
