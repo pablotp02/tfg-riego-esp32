@@ -2,7 +2,7 @@
 
 // Configuración por defecto (modo demo)
 static const system_config_t g_cfg = {
-    .use_simulated_sensors   = false, // <-- por ahora simulación
+    .use_simulated_sensors   = false, // indica si estamos usando sensores reales o simulados
 
     .measure_period_ms       = 5000,  // 5 s demo (luego: horas)
     .irrigate_time_ms        = 2000,  // 2 s demo

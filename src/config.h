@@ -1,6 +1,10 @@
 #pragma once
 #include <stdint.h>
 #include <stdbool.h>
+#include "driver/gpio.h"
+
+// PINES
+#define DHT22_GPIO GPIO_NUM_27
 
 typedef struct {
     bool use_simulated_sensors;     // true: simulación | false: ADC real
