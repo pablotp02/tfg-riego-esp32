@@ -1,4 +1,5 @@
 #include "sensors_dht22.h"
+#include "config.h"
 
 #include "esp_rom_sys.h" //esp_rom_delay_us
 #include "esp_log.h"
@@ -12,6 +13,14 @@ static const char *TAG = "DHT22";
 #define DHT_START_HIGH_US   30      // host libera línea arpox. 20-40us
 #define DHT_TIMEOUT_US      120     // timeout para esperar flancos (seguridad)
 #define DHT_BITS            40
+
+void sensors_dht22_init(void)
+{
+    ESP_LOGI(TAG, "Inicializando sensor DHT22 en GPIO %d", DHT22_GPIO);
+
+    // En el DHT22 no hace falta inicialización hardware,
+    // pero dejamos esta función como punto de extensión futura
+}
 
 // Espera a que el pin esté en un nivel específico hasta timeout_us
 // Devuelve true si lo consigue, false si timeout
@@ -140,3 +149,4 @@ esp_err_t dht22_read(gpio_num_t pin, float *temp_c, float * hum_pct)
 
     return ESP_OK;
 }
+

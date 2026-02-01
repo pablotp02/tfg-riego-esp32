@@ -7,3 +7,5 @@
 // Devuelve ESP_OK si lectura válida (incluye checksum OK)
 // función tipo esp_err_t para unificar errores con el resto del proyecto
 esp_err_t dht22_read(gpio_num_t pin, float *temp_c, float *hum_pct);
+
+void sensors_dht22_init(void);
