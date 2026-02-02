@@ -37,9 +37,33 @@ static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out
     return true;
 }
 
-static bool decide_irrigation(const sensor_data_t *d, float soil_threshold_pct)
+static bool decide_irrigation(const sensor_data_t *d, float soil_threshold_pct, const char **reason_out)
 {
-    return (d->soil_moisture_pct < soil_threshold_pct);
+    // Regla 1: suelo seco
+    if (d->soil_moisture_pct >= soil_threshold_pct)
+    {
+        if (reason_out) *reason_out = "suelo por encima del umbral";
+        return false;
+    }
+
+    // Regla 2 (provisional): bloqueo por temperatura baja
+    // Evita regar con ambiente frío (criterio prudente hasta que se defina la planta con la que trabajar)
+    if (d->temperature_c < 5.0f)
+    {
+        if (reason_out) *reason_out = "bloqueo: temperatura baja";
+        return false;
+    }
+    
+    // Regla 3 (provisional): bloqueo por humedad ambiente muy alta
+    // Evita regar  en condiciones cercanas a saturación
+    if (d->humidity_pct > 95.0f)
+    {
+        if (reason_out) *reason_out = "bloqueo: humedad ambiente alta";
+        return false;
+    }
+
+    if (reason_out) *reason_out = "suelo seco y condiciones OK";
+    return true;
 }
 
 void fsm_init(system_ctx_t *ctx)
@@ -133,14 +157,22 @@ void fsm_step(system_ctx_t *ctx)
         break;
 
     case STATE_DECIDE:
-        ctx->irrigate_request = decide_irrigation(&ctx->last, cfg->soil_threshold_pct);
+    {
+        const char *reason = NULL;
 
-        ESP_LOGI(TAG, "[DECIDE] Umbral suelo=%.1f%% -> riego=%s",
-                cfg->soil_threshold_pct,
-                ctx->irrigate_request ? "SI" : "NO");
+        ctx->irrigate_request = decide_irrigation(&ctx->last, cfg->soil_threshold_pct, &reason);
+
+        ESP_LOGI(TAG, "[DECIDE] suelo_thr=%.1f%% | T=%.1fC | H=%.1f%% -> riego=%s (%s)",
+                    cfg->soil_threshold_pct,
+                    ctx->last.temperature_c,
+                    ctx->last.humidity_pct,
+                    ctx->irrigate_request ? "SI" : "NO",
+                    reason ? reason : "sin motivo"); 
 
         ctx->state = ctx->irrigate_request ? STATE_IRRIGATE : STATE_LOG;
         break;
+    } // ponemos corchetes en el case porque dentro hemos declarado una variable
+        
 
     case STATE_IRRIGATE:
         actuators_irrigate(cfg->irrigate_time_ms);

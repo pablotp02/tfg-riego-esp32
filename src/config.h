@@ -2,9 +2,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "driver/gpio.h"
+#include "hal/gpio_types.h"
 
 // PINES
-#define DHT22_GPIO GPIO_NUM_27
+#define DHT22_GPIO      GPIO_NUM_27
+#define SOIL_MOIST_GPIO GPIO_NUM_34 // potenciómetro 1 -> humedad suelo
+#define SOIL_TEMP_GPIO  GPIO_NUM_35 // potenciómetro 2 -> temperatura suelo
+
+// Umbrales ambientales provisionales (se ajustarán por especie/planta)
+#define AMBIENT_MIN_TEMP_C  (5.0f)  // por debajo, no regar
+#define AMBIENT_MAX_HUM_PCT (95.0f) // por encima, no regar
 
 typedef struct {
     bool use_simulated_sensors;     // true: simulación | false: ADC real

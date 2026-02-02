@@ -39,11 +39,27 @@ static bool adc_calibration_init(void)
 #endif
 }
 
-
-static int read_adc_raw_gpio34(void)
+static bool gpio_to_adc1_channel(gpio_num_t gpio, adc_channel_t *out_ch)
 {
+    switch(gpio)
+    {
+        case GPIO_NUM_34: *out_ch = ADC_CHANNEL_6; return true;
+        case GPIO_NUM_35: *out_ch = ADC_CHANNEL_7; return true;
+        default: return false; // no soportado
+    }
+}
+
+static int read_adc_raw(gpio_num_t gpio)
+{
+    adc_channel_t ch;
+    if (!gpio_to_adc1_channel(gpio, &ch))
+    {
+        ESP_LOGE(TAG, "[ADC] GPIO %d no soportado (solo 34/35)", (int)gpio);
+        return -1;
+    }
+
     int raw = 0;
-    adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &raw);
+    adc_oneshot_read(adc1_handle, ch, &raw);
     return raw;
 }
 
@@ -58,44 +74,66 @@ bool sensors_adc_init(void)
         return false;
     }
 
-    // Configurar canal (GPIO34 -> ADC_CHANNEL_6) y atenuación
-    adc_oneshot_chan_cfg_t chan_cfg = {
-        .atten = ADC_ATTEN_DB_11,          // rango aprox hasta 3.3V
+    // Configurar canales y atenuación (GPIO34/35)
+    adc_oneshot_chan_cfg_t chan_cfg = 
+    {
+        .atten = ADC_ATTEN_DB_11, // rango aprox. hasta 3.3V
         .bitwidth = ADC_BITWIDTH_DEFAULT
     };
-    if (adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_6, &chan_cfg) != ESP_OK) {
-        ESP_LOGE(TAG, "[ADC] No se pudo configurar canal ADC1_CH6 (GPIO34)");
+
+    if (adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_6, &chan_cfg) != ESP_OK)
+    {
+        ESP_LOGE(TAG, "[ADC] No se pudo configurar ADC1_CH6 (GPIO34)");
+        return false;
+    }
+    if (adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_7, &chan_cfg) != ESP_OK)
+    {
+        ESP_LOGE(TAG, "[ADC] No se pudo configurar ADC1_CH7 (GPIO35)");
         return false;
     }
 
     cali_enabled = adc_calibration_init();
-    ESP_LOGI(TAG, "[ADC] init OK (GPIO34). Calibración: %s", cali_enabled ? "SI" : "NO");
+    ESP_LOGI(TAG, "[ADC] init OK (GPIO34/GPIO35). Calibración: %s", cali_enabled ? "SI" : "NO");
 
     return true;
 }
 
 sensor_data_t sensors_adc_read(void)
 {
-    int raw = read_adc_raw_gpio34();
+    int raw_moist = read_adc_raw(SOIL_MOIST_GPIO);
+    int raw_temp  = read_adc_raw(SOIL_TEMP_GPIO);
 
-    int mv = -1;
-    if (cali_enabled) {
-        adc_cali_raw_to_voltage(cali_handle, raw, &mv);
+    // mV solo para el de humedad, para no liar logs
+    int mv_moist = -1;
+    if (cali_enabled)
+    {
+        adc_cali_raw_to_voltage(cali_handle, raw_moist, &mv_moist);
     }
 
-    ESP_LOGI(TAG, "[ADC] raw=%d %s", raw, (mv >= 0) ? "" : "(sin mV)");
+    // Humedad suelo (provisional, escala lineal)
+    float soil_pct = (raw_moist * 100.0f) / 4095.0f;
 
-    // Provisional: devolvemos “suelo” como una escala simple solo para demostrar lectura.
-    // (No es calibración real de humedad. Se implementará con el sensor definitivo.)
-    sensor_data_t d = {
-        .soil_moisture_pct = (raw * 100.0f) / 4095.0f,
-        .temperature_c = 25.0f,
-        .humidity_pct = 50.0f
+    // Temperatura suelo (provisoinal) 0 a 50ºC
+    float soil_temp_c = (raw_temp * 50.0f) / 4095.0f;
+
+    ESP_LOGI(TAG, "[ADC] moist_raw=%d %s | temp_raw=%d", raw_moist, (mv_moist >= 0) ? "" : "(sin mV)", raw_temp);
+
+    if (mv_moist >= 0)
+    {
+        ESP_LOGI(TAG, "[ADC] moist=%d mV | soil_pct(prov)=%.1f%% | soil_temp(prov)=%.1fºC", mv_moist, soil_pct, soil_temp_c);
+    }
+    else 
+    {
+        ESP_LOGI(TAG, "[ADC] soil_pct(prov)=%.1f%% | soil_temp(prov)=%.1fºC", soil_pct, soil_temp_c);
+    }
+
+    sensor_data_t d = 
+    {
+        .soil_moisture_pct = soil_pct,
+        .temperature_c     = soil_temp_c, // temperatura de suelo
+        .humidity_pct      = 50.0f        // lo pisa DHT22 en sensors.c
     };
 
-    if (mv >= 0) {
-        ESP_LOGI(TAG, "[ADC] approx=%d mV | soil_pct(prov)=%.1f%%", mv, d.soil_moisture_pct);
-    }
-
     return d;
+
 }
