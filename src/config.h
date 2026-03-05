@@ -3,11 +3,19 @@
 #include <stdbool.h>
 #include "driver/gpio.h"
 #include "hal/gpio_types.h"
+#include "driver/uart.h"
 
 // PINES
 #define DHT22_GPIO      GPIO_NUM_27
 #define SOIL_MOIST_GPIO GPIO_NUM_34 // potenciómetro 1 -> humedad suelo
 #define SOIL_TEMP_GPIO  GPIO_NUM_35 // potenciómetro 2 -> temperatura suelo
+
+// RS485 / MODBUS (SEN0604 + DFR0845)
+#define RS485_UART_PORT  (UART_NUM_2)
+#define RS485_UART_TX    (GPIO_NUM_17)
+#define RS485_UART_RX    (GPIO_NUM_16)
+#define RS485_BAUDRATE   (9600)
+#define RS485_SLAVE_ADDR (0x01)
 
 // Umbrales ambientales provisionales (se ajustarán por especie/planta)
 #define AMBIENT_MIN_TEMP_C  (5.0f)  // por debajo, no regar
@@ -15,6 +23,7 @@
 
 typedef struct {
     bool use_simulated_sensors;     // true: simulación | false: ADC real
+    bool use_rs485_sensor;          // true: leer suelo por SEN0604 (RS485)
     
     // Temporización (demo)
     uint32_t measure_period_ms;     // tiempo entre ciclos (demo). Luego: horas
