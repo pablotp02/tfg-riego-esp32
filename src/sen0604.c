@@ -3,6 +3,7 @@
 #include "rs485_uart.h"
 #include "modbus_rtu.h"
 #include "esp_log.h"
+#include "esp_err.h"
 #include <string.h>
 
 static const char *TAG = "SEN0604";
@@ -20,46 +21,66 @@ static int16_t u16_to_i16(uint16_t v)
 
 esp_err_t sen0604_read_all(uint8_t slave_addr, sen0604_data_t *out)
 {
+    // Comprobamos que el puntero no sea NULL
     if (!out) return ESP_ERR_INVALID_ARG;
 
-    // Request: leer 4 registros desde 0x0000 (moist, temp, ec, ph)
+    // 1) Construir petición Modbus:
+    // leer 4 registros desde 0x0000:
+    // 0x0000 -> humedad
+    // 0x0001 -> temperatura
+    // 0x0002 -> EC 
+    // 0x0003 -> pH
     uint8_t req[8];
     size_t req_len = modbus_build_read_holding(slave_addr, 0x0000, 4, req, sizeof(req));
-    if (req_len == 0) return ESP_FAIL;
+    if (req_len == 0)
+    {
+        ESP_LOGE(TAG, "No se pudo construir la trama Modbus");
+        return ESP_FAIL;
+    }
 
-    // Limpiamos la salida
+    // 2) Limpiar la salida para evitar valores basura si algo falla
     memset(out, 0, sizeof(*out));
 
-    // Enviar 
+    // 3) Enivar petición
     esp_err_t err = rs485_uart_write(RS485_UART_PORT, req, req_len);
     if (err != ESP_OK)
     {
-        ESP_LOGW(TAG, "UART write failed: %s", esp_err_to_name(err));
+        ESP_LOGW(TAG, "Fallo en UART write: %s", esp_err_to_name(err));
         return err;
     }
 
-    // Recibir: respuesta esperada = 1+1+1+8+2 = 13 bytes
+    // 4) Leer respuesta 
+    // Respuesta esperada para 4 registros:
+    // addr(1) + func(1) + bytecount(1) + data(8) + crc(2) = 13 bytes
     uint8_t resp[32];
     size_t resp_len = 0;
+
     err = rs485_uart_read(RS485_UART_PORT, resp, sizeof(resp), 200, &resp_len);
-    if (err != ESP_OK) return err;
+    if (err != ESP_OK)
+    {
+        ESP_LOGW(TAG, "Fallo en UART read: %s", esp_err_to_name(err));
+        return err;
+    }
 
     if (resp_len == 0)
     {
-        // normal si no hay sensor conectado
+        // si no hay sensor conectado
         ESP_LOGW(TAG, "No response (sensor not connected yet?)");
         return ESP_ERR_TIMEOUT;
     }
 
-    if (!modbus_validate_read_holding_resp(resp, resp_len, slave_addr, 4))
+    // 5) Validar respuesta Modbus con detalle
+    modbus_status_t st = modbus_validate_read_holding_resp(resp, resp_len, slave_addr, 4);
+    if (st != MODBUS_OK)
     {
-        ESP_LOGW(TAG, "Invalid Modbus response (len=%u)", (unsigned)resp_len);
-        return ESP_ERR_INVALID_CRC;
+        ESP_LOGW(TAG, "Respuesta Modbus inválida: %s", modbus_status_to_str(st));
+        return modbus_status_to_esp_err(st);
     }
 
-    // Data empieza en resp[3], big endian por registro
-    uint16_t r0 = ((uint16_t)resp[3] << 8) | resp[4]; // moist x10
-    uint16_t r1 = ((uint16_t)resp[5] << 8) | resp[6]; // temp x10 (signed)
+    // 6) Parsear registros
+    // Datos empiezan en resp[3], big-endian por registro
+    uint16_t r0 = ((uint16_t)resp[3] << 8) | resp[4]; // humedad x10
+    uint16_t r1 = ((uint16_t)resp[5] << 8) | resp[6]; // temperatura x10 (signed)
     uint16_t r2 = ((uint16_t)resp[7] << 8) | resp[8]; // EC us/cm
     uint16_t r3 = ((uint16_t)resp[9] << 8) | resp[10]; // pH x10
 
