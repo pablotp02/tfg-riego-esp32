@@ -16,54 +16,94 @@
 #define TEMP_MAX_C     (60.0f)
 #define HUM_MIN_PCT    (0.0f)
 #define HUM_MAX_PCT    (100.0f)
+#define PH_MIN         (0.0f)
+#define PH_MAX         (14.0f)
+#define EC_MIN_US_CM   (0.0f)
+#define EC_MAX_US_CM   (20000.0f)
 
 static const char *TAG = "TFG_RIEGO";
 
 static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out)
 {
-    if (d->soil_moisture_pct < SOIL_MIN_PCT || d->soil_moisture_pct > SOIL_MAX_PCT) {
+    if (d->soil_moisture_pct < SOIL_MIN_PCT || d->soil_moisture_pct > SOIL_MAX_PCT) 
+    {
         if (reason_out) *reason_out = "Humedad de suelo fuera de rango";
         return false;
     }
-    if (d->temperature_c < TEMP_MIN_C || d->temperature_c > TEMP_MAX_C) {
-        if (reason_out) *reason_out = "Temperatura fuera de rango";
+
+    // temperature_c representa temperatura del suelo
+    if (d->temperature_c < TEMP_MIN_C || d->temperature_c > TEMP_MAX_C) 
+    {
+        if (reason_out) *reason_out = "Temperatura de suelo fuera de rango";
         return false;
     }
-    if (d->humidity_pct < HUM_MIN_PCT || d->humidity_pct > HUM_MAX_PCT) {
+
+    // humidity_pct representa humedad ambiente
+    if (d->humidity_pct < HUM_MIN_PCT || d->humidity_pct > HUM_MAX_PCT) 
+    {
         if (reason_out) *reason_out = "Humedad ambiente fuera de rango";
         return false;
     }
+
+    // Validación adicional solo si ya hay datos válidos del SEN0604
+    if (sensors_have_sen0604_data()) 
+    {
+        float ph = sensors_get_last_ph();
+        float ec = sensors_get_last_ec();
+
+        if (ph < PH_MIN || ph > PH_MAX)
+        {
+            if (reason_out) *reason_out = "pH fuera de rango";
+            return false;
+        }
+
+        if (ec < EC_MIN_US_CM || ec > EC_MAX_US_CM) 
+        {
+            if (reason_out) *reason_out = "EC fuera de rango";
+            return false;
+        }
+    }
+
     if (reason_out) *reason_out = NULL;
     return true;
 }
 
-static bool decide_irrigation(const sensor_data_t *d, float soil_threshold_pct, const char **reason_out)
+static bool decide_irrigation(const sensor_data_t *d,
+                                 float soil_start_pct,
+                                 float soil_stop_pct,
+                                 bool was_irrigating,
+                                 const char **reason_out)
 {
-    // Regla 1: suelo seco
-    if (d->soil_moisture_pct >= soil_threshold_pct)
+    // Regla 1: bloqueo por temperatura de suelo baja
+    if (d->temperature_c < SOIL_MIN_TEMP_C)
     {
-        if (reason_out) *reason_out = "suelo por encima del umbral";
+        if (reason_out) *reason_out = "bloqueo: temperatura de suelo baja";
         return false;
     }
 
-    // Regla 2 (provisional): bloqueo por temperatura baja
-    // Evita regar con ambiente frío (criterio prudente hasta que se defina la planta con la que trabajar)
-    if (d->temperature_c < 5.0f)
-    {
-        if (reason_out) *reason_out = "bloqueo: temperatura baja";
-        return false;
-    }
-    
-    // Regla 3 (provisional): bloqueo por humedad ambiente muy alta
-    // Evita regar  en condiciones cercanas a saturación
-    if (d->humidity_pct > 95.0f)
+    // Regla 2: bloqueo por humedad ambiente muy alta
+    if (d->humidity_pct > AIR_MAX_HUM_PCT)
     {
         if (reason_out) *reason_out = "bloqueo: humedad ambiente alta";
         return false;
     }
+    
+    // Regla 3: histéresis por humedad de suelo
+    if (d->soil_moisture_pct < soil_start_pct)
+    {
+        if (reason_out) *reason_out = "suelo por debajo del umbral de arranque";
+        return true;
+    }
 
-    if (reason_out) *reason_out = "suelo seco y condiciones OK";
-    return true;
+    if (d->soil_moisture_pct > soil_stop_pct)
+    {
+        if (reason_out) *reason_out = "suelo por encima del umbral de parada";
+        return false;
+    }
+
+    // Zona intermedia: mantener estado anterior
+    if (reason_out) *reason_out = "zona de histéresis: mantener estado previo";
+    return was_irrigating;
 }
 
 void fsm_init(system_ctx_t *ctx)
@@ -76,7 +116,8 @@ void fsm_init(system_ctx_t *ctx)
         .cycles_since_send = 0,
         .pending_send = false,
         .sensor_valid = true,
-        .error_reason = NULL
+        .error_reason = NULL,
+        .sensor_error_count = 0
     };
 
     ESP_LOGI(TAG, "TFG Riego - arranque OK (ESP-IDF).");
@@ -91,12 +132,13 @@ void fsm_step(system_ctx_t *ctx)
     case STATE_INIT:
         ESP_LOGI(TAG, "[INIT] Inicializando sistema...");
         
-        ESP_LOGI(TAG, "[CFG] period=%lums irrig=%lums measure_n=%lu send_n=%lu soil_thr=%.1f%%",
+        ESP_LOGI(TAG, "[CFG] period=%lums irrig=%lums measure_n=%lu send_n=%lu soil_start=%.1f%% soil_stop=%.1f%%",
             (unsigned long)cfg->measure_period_ms,
             (unsigned long)cfg->irrigate_time_ms,
             (unsigned long)cfg->measure_every_n_cycles,
             (unsigned long)cfg->send_every_n_cycles,
-            cfg->soil_threshold_pct);
+            cfg->soil_start_irrigation_pct,
+            cfg->soil_stop_irrigation_pct);
 
         if (!sensors_init())
         {
@@ -147,11 +189,17 @@ void fsm_step(system_ctx_t *ctx)
 
     case STATE_VALIDATE:
         ctx->sensor_valid = validate_sensor_data(&ctx->last, &ctx->error_reason);
-        if (ctx->sensor_valid) {
+        if (ctx->sensor_valid) 
+        {
+            ctx->sensor_error_count = 0;
             ESP_LOGI(TAG, "[VALIDATE] Datos OK.");
             ctx->state = STATE_DECIDE;
-        } else {
-            ESP_LOGW(TAG, "[VALIDATE] Datos INVALIDOS: %s", ctx->error_reason);
+        } 
+        else 
+        {
+            ctx->sensor_error_count++;
+            ESP_LOGW(TAG, "[VALIDATE] Datos INVALIDOS: %s (errores seguidos: %lu)",
+                 ctx->error_reason, (unsigned long)ctx->sensor_error_count);
             ctx->state = STATE_ERROR;
         }
         break;
@@ -160,19 +208,24 @@ void fsm_step(system_ctx_t *ctx)
     {
         const char *reason = NULL;
 
-        ctx->irrigate_request = decide_irrigation(&ctx->last, cfg->soil_threshold_pct, &reason);
+        ctx->irrigate_request = decide_irrigation(&ctx->last,
+                                                cfg->soil_start_irrigation_pct,
+                                                cfg->soil_stop_irrigation_pct,
+                                                ctx->irrigate_request,
+                                                &reason);
 
-        ESP_LOGI(TAG, "[DECIDE] suelo_thr=%.1f%% | T=%.1fC | H=%.1f%% -> riego=%s (%s)",
-                    cfg->soil_threshold_pct,
-                    ctx->last.temperature_c,
-                    ctx->last.humidity_pct,
-                    ctx->irrigate_request ? "SI" : "NO",
-                    reason ? reason : "sin motivo"); 
-
+        ESP_LOGI(TAG,
+                 "[DECIDE] suelo_start=%.1f%% | suelo_stop=%.1f%% | T=%.1fC | H=%.1f%% -> riego=%s (%s)",
+                 cfg->soil_start_irrigation_pct,
+                 cfg->soil_stop_irrigation_pct,
+                 ctx->last.temperature_c,
+                 ctx->last.humidity_pct,
+                 ctx->irrigate_request ? "SI" : "NO",
+                 reason ? reason : "sin motivo");
+        
         ctx->state = ctx->irrigate_request ? STATE_IRRIGATE : STATE_LOG;
         break;
-    } // ponemos corchetes en el case porque dentro hemos declarado una variable
-        
+    }
 
     case STATE_IRRIGATE:
         actuators_irrigate(cfg->irrigate_time_ms);
@@ -189,11 +242,41 @@ void fsm_step(system_ctx_t *ctx)
         break;
 
     case STATE_SEND:
-        ESP_LOGI(TAG, "[SEND] Envío de datos (placeholder). En el futuro: WiFi + API/BD.");
+    {// las llaves dentro del case son porque hemos declarado variables locales (evita problemas de alcance)
+        bool have_soil_extra = sensors_have_sen0604_data();
+        float ph = sensors_get_last_ph();
+        float ec = sensors_get_last_ec();
+
+        if (have_soil_extra) 
+        {
+            ESP_LOGI(TAG,
+                    "[SEND] payload -> suelo=%.1f%% | temp=%.1fC | hum=%.1f%% | pH=%.1f | EC=%.0f | riego=%s | valid=%s | errores=%lu",
+                    ctx->last.soil_moisture_pct,
+                    ctx->last.temperature_c,
+                    ctx->last.humidity_pct,
+                    ph,
+                    ec, 
+                    ctx->irrigate_request ? "SI" : "NO",
+                    ctx->sensor_valid ? "SI" : "NO",
+                    (unsigned long)ctx->sensor_error_count);
+        }
+        else
+        {
+            ESP_LOGI(TAG,
+                    "[SEND] payload -> suelo=%.1f%% | temp=%.1fC | hum=%.1f%% | pH=N/A | EC=N/A | riego=%s | valid=%s | errores=%lu",
+                    ctx->last.soil_moisture_pct,
+                    ctx->last.temperature_c,
+                    ctx->last.humidity_pct,
+                    ctx->irrigate_request ? "SI" : "NO",
+                    ctx->sensor_valid ? "SI" : "NO",
+                    (unsigned long)ctx->sensor_error_count);
+        }
+
         vTaskDelay(pdMS_TO_TICKS(300));
         ctx->pending_send = false;
         ctx->state = STATE_SLEEP;
         break;
+    }
 
     case STATE_SLEEP:
         ESP_LOGI(TAG, "[SLEEP] Esperando siguiente ciclo (%lu ms)...",

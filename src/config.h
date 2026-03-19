@@ -18,8 +18,8 @@
 #define RS485_SLAVE_ADDR (0x01)
 
 // Umbrales ambientales provisionales (se ajustarán por especie/planta)
-#define AMBIENT_MIN_TEMP_C  (5.0f)  // por debajo, no regar
-#define AMBIENT_MAX_HUM_PCT (95.0f) // por encima, no regar
+#define SOIL_MIN_TEMP_C  (5.0f)  // por debajo, no regar
+#define AIR_MAX_HUM_PCT  (95.0f) // por encima, no regar
 
 typedef struct {
     bool use_simulated_sensors;     // true: simulación | false: ADC real
@@ -33,8 +33,9 @@ typedef struct {
     uint32_t measure_every_n_cycles; // cada cuántos ciclos medir
     uint32_t send_every_n_cycles;    // cada cuántos ciclos enviar
 
-    // Umbrales (provisionales)
-    float soil_threshold_pct;       // umbral humedad suelo (%)
+    // Umbrales 
+    float soil_start_irrigation_pct; // por debajo de este valor, pedir riego
+    float soil_stop_irrigation_pct;  // por encima de este valor, dejar de regar
 
 } system_config_t;
 

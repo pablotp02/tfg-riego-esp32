@@ -127,3 +127,21 @@ bool sensors_init(void)
     ESP_LOGI(TAG, "Inicialización de sensores completada");
     return true;
 }
+
+// Devuelve el último pH almacenado
+float sensors_get_last_ph(void)
+{
+    return s_last_ph;
+}
+
+// Devuelve la última EC almacenada
+float sensors_get_last_ec(void)
+{
+    return s_last_ec;
+}
+
+// Permite distinguir si la caché es válida o no
+bool sensors_have_sen0604_data(void)
+{
+    return s_have_sen0604;
+}
