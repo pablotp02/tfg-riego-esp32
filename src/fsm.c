@@ -25,6 +25,16 @@ static const char *TAG = "TFG_RIEGO";
 
 static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out)
 {
+    const system_config_t *cfg = config_get();
+
+    // Si estamos usando RS485 pero aún no hay ninguna lectura válida del SEN0604,
+    // no debemos interpretar los valores de suelo como datos reales
+    if (cfg->use_rs485_sensor && !sensors_have_sen0604_data()) 
+    {
+        if (reason_out) *reason_out = "Lectura de suelo no disponible";
+        return false;
+    }
+
     if (d->soil_moisture_pct < SOIL_MIN_PCT || d->soil_moisture_pct > SOIL_MAX_PCT) 
     {
         if (reason_out) *reason_out = "Humedad de suelo fuera de rango";
@@ -53,13 +63,13 @@ static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out
 
         if (ph < PH_MIN || ph > PH_MAX)
         {
-            if (reason_out) *reason_out = "pH fuera de rango";
+            if (reason_out) *reason_out = "pH fuera de rango (dato inválido)";
             return false;
         }
 
         if (ec < EC_MIN_US_CM || ec > EC_MAX_US_CM) 
         {
-            if (reason_out) *reason_out = "EC fuera de rango";
+            if (reason_out) *reason_out = "EC fuera de rango (dato inválido)";
             return false;
         }
     }
@@ -117,7 +127,8 @@ void fsm_init(system_ctx_t *ctx)
         .pending_send = false,
         .sensor_valid = true,
         .error_reason = NULL,
-        .sensor_error_count = 0
+        .sensor_error_count = 0,
+        .sensor_read_error_count = 0
     };
 
     ESP_LOGI(TAG, "TFG Riego - arranque OK (ESP-IDF).");
@@ -180,10 +191,28 @@ void fsm_step(system_ctx_t *ctx)
         ctx->cycle_count++;
         ESP_LOGI(TAG, "[MEASURE] Tomando medidas...");
         ctx->last = sensors_read();
+
+        if (cfg->use_rs485_sensor)
+        {
+            if (sensors_last_rs485_read_ok())
+            {
+                ctx->sensor_read_error_count = 0;
+            }
+            else
+            {
+                ctx->sensor_read_error_count++;
+            }
+        }
+        else // si cambiamos de modo reseteamos contador
+        {
+            ctx->sensor_read_error_count = 0;
+        }
+
         ESP_LOGI(TAG, "[MEASURE] suelo=%.1f%% | temp=%.1fC | hum=%.1f%%",
-                 ctx->last.soil_moisture_pct,
-                 ctx->last.temperature_c,
-                 ctx->last.humidity_pct);
+                    ctx->last.soil_moisture_pct,
+                    ctx->last.temperature_c,
+                    ctx->last.humidity_pct);
+        
         ctx->state = STATE_VALIDATE;
         break;
 
@@ -249,27 +278,29 @@ void fsm_step(system_ctx_t *ctx)
 
         if (have_soil_extra) 
         {
-            ESP_LOGI(TAG,
-                    "[SEND] payload -> suelo=%.1f%% | temp=%.1fC | hum=%.1f%% | pH=%.1f | EC=%.0f | riego=%s | valid=%s | errores=%lu",
+            ESP_LOGI(TAG, 
+                    "[SEND] payload -> suelo=%.1f%% | temp=%.1fC | hum=%.1f%% | pH=%.1f | EC=%.0f | riego=%s | valid=%s | err_val=%lu | err_read=%lu",
                     ctx->last.soil_moisture_pct,
                     ctx->last.temperature_c,
                     ctx->last.humidity_pct,
                     ph,
-                    ec, 
+                    ec,
                     ctx->irrigate_request ? "SI" : "NO",
-                    ctx->sensor_valid ? "SI" : "NO",
-                    (unsigned long)ctx->sensor_error_count);
+                    ctx->sensor_valid ? "SI" : "NO", 
+                    (unsigned long)ctx->sensor_error_count,
+                    (unsigned long)ctx->sensor_read_error_count);
         }
         else
         {
             ESP_LOGI(TAG,
-                    "[SEND] payload -> suelo=%.1f%% | temp=%.1fC | hum=%.1f%% | pH=N/A | EC=N/A | riego=%s | valid=%s | errores=%lu",
+                    "[SEND] payload -> suelo=%.1f%% | temp=%.1fC | hum=%.1f%% | pH=N/A | EC=N/A | riego=%s | valid=%s | err_val=%lu | err_read=%lu",
                     ctx->last.soil_moisture_pct,
                     ctx->last.temperature_c,
                     ctx->last.humidity_pct,
                     ctx->irrigate_request ? "SI" : "NO",
                     ctx->sensor_valid ? "SI" : "NO",
-                    (unsigned long)ctx->sensor_error_count);
+                    (unsigned long)ctx->sensor_error_count,
+                    (unsigned long)ctx->sensor_read_error_count);
         }
 
         vTaskDelay(pdMS_TO_TICKS(300));

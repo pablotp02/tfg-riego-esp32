@@ -22,6 +22,8 @@ static float s_last_soil_temp_c = 25.0f;
 static float s_last_ph = 0.0f;
 static float s_last_ec = 0.0f;
 
+static bool s_last_rs485_read_ok = true;
+
 sensor_data_t sensors_read(void)
 {
     const system_config_t *cfg = config_get();
@@ -41,6 +43,8 @@ sensor_data_t sensors_read(void)
 
         if (rs_err == ESP_OK) 
         {
+            s_last_rs485_read_ok = true;
+
             d.soil_moisture_pct = sen.soil_moisture_pct;
             d.temperature_c = sen.soil_temp_c;
 
@@ -55,12 +59,25 @@ sensor_data_t sensors_read(void)
         } 
         else 
         {
-            ESP_LOGW(TAG, "[SEN0604] Fallo lectura (%s). Usando último valor %s",
-                     esp_err_to_name(rs_err), s_have_sen0604 ? "válido" : "por defecto");
+            s_last_rs485_read_ok = false;
 
-            // fallback si falla RS485
-            d.soil_moisture_pct = s_last_soil_moist_pct;
-            d.temperature_c = s_last_soil_temp_c;
+            ESP_LOGW(TAG, "[SEN0604] Fallo lectura (%s). Usando último valor %s",
+                     esp_err_to_name(rs_err), s_have_sen0604 ? "válido" : "inválido");
+
+
+            if (s_have_sen0604)
+            {
+                // Si ya hubo una lectura válida antes, reutilizamos el último valor bueno
+                d.soil_moisture_pct = s_last_soil_moist_pct;
+                d.temperature_c = s_last_soil_temp_c;
+            }
+            else 
+            {
+                // Si nunca hubo una lectura válida del sensor, devolvemos datos inválidos
+                // para que la FSM no tome decisiones de riego a ciegas
+                d.soil_moisture_pct = -1.0f;
+                d.temperature_c = -100.0f;
+            }
         }
     } 
     else 
@@ -144,4 +161,10 @@ float sensors_get_last_ec(void)
 bool sensors_have_sen0604_data(void)
 {
     return s_have_sen0604;
+}
+
+// Indica si la última lectura del sensor RS485 se realizó correctamente
+bool sensors_last_rs485_read_ok(void)
+{
+    return s_last_rs485_read_ok;
 }

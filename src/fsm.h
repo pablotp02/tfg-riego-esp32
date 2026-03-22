@@ -30,6 +30,7 @@ typedef struct {
     bool sensor_valid;
     const char *error_reason;
     uint32_t sensor_error_count;
+    uint32_t sensor_read_error_count;
 
     uint32_t cycles_since_measure;
     uint32_t cycles_since_send;

@@ -9,3 +9,4 @@ bool sensors_init(void);
 float sensors_get_last_ph(void);
 float sensors_get_last_ec(void);
 bool sensors_have_sen0604_data(void);
+bool sensors_last_rs485_read_ok(void);
