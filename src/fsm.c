@@ -8,6 +8,7 @@
 #include "sensors.h"
 #include "actuators.h"
 #include "logger.h"
+#include "power.h"
 
 // Rangos válidos (provisionales) para validación
 #define SOIL_MIN_PCT   (0.0f)
@@ -310,10 +311,17 @@ void fsm_step(system_ctx_t *ctx)
     }
 
     case STATE_SLEEP:
-        ESP_LOGI(TAG, "[SLEEP] Esperando siguiente ciclo (%lu ms)...",
+        ESP_LOGI(TAG, "[SLEEP] Entrando en deep sleep hasta el siguiente ciclo (%lu ms)...",
                 (unsigned long)cfg->measure_period_ms);
-        vTaskDelay(pdMS_TO_TICKS(cfg->measure_period_ms));
-        ctx->state = STATE_SCHEDULE;
+
+        //Guardamos en RTC los campos persistentes antes de dormir
+        power_store_ctx_to_rtc(ctx);
+
+        // Entramos en deep sleep con wakeup por timer
+        power_enter_deep_sleep(cfg->measure_period_ms);
+
+        // Si todo va bien, no debería volver nunca de esta función
+        ESP_LOGW(TAG, "[SLEEP] Retorno inesperado desde power_enter_deep_sleep()");
         break;
 
     case STATE_ERROR:
