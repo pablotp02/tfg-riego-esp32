@@ -168,24 +168,31 @@ void fsm_step(system_ctx_t *ctx)
         ctx->cycles_since_measure++;
         ctx->cycles_since_send++;
 
-        ESP_LOGI(TAG, "[SCHEDULE] ciclos: desde_measure=%lu, desde_send=%lu, pending_send=%s",
-                 (unsigned long)ctx->cycles_since_measure,
-                 (unsigned long)ctx->cycles_since_send,
-                 ctx->pending_send ? "SI" : "NO");
-
-        if (ctx->cycles_since_send >= cfg->send_every_n_cycles) {
+        if (ctx->cycles_since_send >= cfg->send_every_n_cycles) 
+        {
             ctx->cycles_since_send = 0;
             ctx->pending_send = true;
         }
 
-        if (ctx->cycles_since_measure >= cfg->measure_every_n_cycles) {
+        if (ctx->cycles_since_measure >= cfg->measure_every_n_cycles) 
+        {
             ctx->cycles_since_measure = 0;
             ctx->state = STATE_MEASURE;
-        } else if (ctx->pending_send) {
+        } 
+        else if (ctx->pending_send) 
+        {
             ctx->state = STATE_SEND;
-        } else {
+        } 
+        else 
+        {
             ctx->state = STATE_SLEEP;
         }
+
+        ESP_LOGI(TAG, "[SCHEDULE] ciclos: desde_measure=%lu, desde_send=%lu, pending_send=%s",
+                        (unsigned long)ctx->cycles_since_measure,
+                        (unsigned long)ctx->cycles_since_send,
+                        ctx->pending_send ? "SI" : "NO");
+
         break;
 
     case STATE_MEASURE:
