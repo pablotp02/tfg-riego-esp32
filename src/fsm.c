@@ -174,15 +174,25 @@ void fsm_step(system_ctx_t *ctx)
         break;
 
     case STATE_SCHEDULE:
+    {
         ctx->cycles_since_measure++;
         ctx->cycles_since_send++;
+
+        // Frecuencia de envío adaptada al modo energético
+        uint32_t send_every_n = cfg->send_every_n_cycles;
+
+        // En modo LOW se reduce la frecuencia de envío
+        if (ctx->power_mode == POWER_MODE_LOW)
+        {
+            send_every_n = 5;
+        }
 
         // En modo crítico no se realizan envíos para ahorrar energía
         if (ctx->power_mode == POWER_MODE_CRITICAL)
         {
             ctx->pending_send = false;
         }
-        else if (ctx->cycles_since_send >= cfg->send_every_n_cycles)
+        else if (ctx->cycles_since_send >= send_every_n)
         {
             ctx->cycles_since_send = 0;
             ctx->pending_send = true;
@@ -202,13 +212,15 @@ void fsm_step(system_ctx_t *ctx)
             ctx->state = STATE_SLEEP;
         }
 
-        ESP_LOGI(TAG, "[SCHEDULE] ciclos: desde_measure=%lu, desde_send=%lu, pending_send=%s | mode=%s",
+        ESP_LOGI(TAG, "[SCHEDULE] ciclos: desde_measure=%lu, desde_send=%lu, pending_send=%s | mode=%s | send_every=%lu",
                 (unsigned long)ctx->cycles_since_measure,
                 (unsigned long)ctx->cycles_since_send,
                 ctx->pending_send ? "SI" : "NO",
-                power_mode_to_str(ctx->power_mode));
+                power_mode_to_str(ctx->power_mode),
+                (unsigned long)send_every_n);
         
         break;
+    }
 
     case STATE_MEASURE:
         ctx->cycle_count++;
