@@ -14,6 +14,9 @@ typedef struct
     uint32_t sensor_error_count;
     uint32_t sensor_read_error_count;
     bool boot_initialized;
+
+    float battery_level_pct;
+    power_mode_t power_mode;
 } rtc_persisted_state_t;
 
 // Variable almacenada en memoria RTC, persiste tras deep sleep
@@ -36,6 +39,10 @@ static void rtc_state_reset_defaults(void)
     s_rtc_state.cycles_since_send = 0;
     s_rtc_state.sensor_error_count = 0;
     s_rtc_state.sensor_read_error_count = 0;
+
+    s_rtc_state.battery_level_pct = 100.0f;
+    s_rtc_state.power_mode = POWER_MODE_NORMAL;
+
     s_rtc_state.boot_initialized = false;
 }
 
@@ -68,13 +75,17 @@ void power_restore_ctx_from_rtc(system_ctx_t *ctx)
     ctx->cycles_since_send = s_rtc_state.cycles_since_send;
     ctx->sensor_error_count = s_rtc_state.sensor_error_count;
     ctx->sensor_read_error_count = s_rtc_state.sensor_read_error_count;
+    ctx->battery_level_pct = s_rtc_state.battery_level_pct;
+    ctx->power_mode = s_rtc_state.power_mode;
 
     ESP_LOGI(TAG,
-                "Contexto restaurado desde RTC -> cycle=%lu send_since=%lu err_val=%lu err_read=%lu",
+            "Contexto restaurado desde RTC -> cycle=%lu send_since=%lu err_val=%lu err_read=%lu battery=%.1f%% mode=%d",
             (unsigned long)ctx->cycle_count,
             (unsigned long)ctx->cycles_since_send,
             (unsigned long)ctx->sensor_error_count,
-            (unsigned long)ctx->sensor_read_error_count);
+            (unsigned long)ctx->sensor_read_error_count,
+            ctx->battery_level_pct,
+            ctx->power_mode);
 }
 
 // Copia desde el contexto normal de ejecución al estado persistente RTC
@@ -91,13 +102,17 @@ void power_store_ctx_to_rtc(const system_ctx_t *ctx)
     s_rtc_state.sensor_error_count = ctx->sensor_error_count;
     s_rtc_state.sensor_read_error_count = ctx->sensor_read_error_count;
     s_rtc_state.boot_initialized = true;
+    s_rtc_state.battery_level_pct = ctx->battery_level_pct;
+    s_rtc_state.power_mode = ctx->power_mode;
 
     ESP_LOGI(TAG,
-            "Contexto guardado en RTC -> cycle=%lu send_since=%lu err_val=%lu err_read=%lu",
+            "Contexto guardado en RTC -> cycle=%lu send_since=%lu err_val=%lu err_read=%lu battery=%.1f%% mode=%d",
             (unsigned long)s_rtc_state.cycle_count,
             (unsigned long)s_rtc_state.cycles_since_send,
             (unsigned long)s_rtc_state.sensor_error_count,
-            (unsigned long)s_rtc_state.sensor_read_error_count);
+            (unsigned long)s_rtc_state.sensor_read_error_count,
+            s_rtc_state.battery_level_pct,
+            s_rtc_state.power_mode);
 }
 
 // Devuelve un texto legible para poder hacer logs personalizados
@@ -146,4 +161,119 @@ void power_enter_deep_sleep(uint32_t sleep_ms)
     ESP_LOGI(TAG, "Wakeup source configurada: TIMER");
     ESP_LOGI(TAG, "Deep sleep start...");
     esp_deep_sleep_start();
+}
+
+void power_update_battery_and_mode(system_ctx_t *ctx)
+{
+    if (!ctx)
+    {
+        ESP_LOGW(TAG, "power_update_battery_and_mode(): ctx es NULL");
+        return;
+    }
+
+    // 1) Simulación de consumo de batería según modo actual
+    float consumption = 0.0f;
+
+    switch (ctx->power_mode)
+    {
+        case POWER_MODE_NORMAL: 
+            consumption = 10.0f; // Consumo alto (aumentamos el gasto para que las simulaciones la bateria se gaste antes)
+            break;
+        
+        case POWER_MODE_LOW: 
+            consumption = 5.0f; // Consumo medio
+            break;
+
+        case POWER_MODE_CRITICAL:
+            consumption = 2.0f; // Consumo mínimo
+            break;
+
+        default: 
+            consumption = 1.0f;
+            break;
+    }
+
+    ctx->battery_level_pct -= consumption;
+
+    // Evitar valores negativos
+    if (ctx->battery_level_pct < 0.0f)
+    {
+        ctx->battery_level_pct = 0.0f;
+    }
+
+    // 2) Determinar nuevo modo energético según batería
+    power_mode_t prev_mode = ctx->power_mode;
+
+    if (ctx->battery_level_pct >= 50.0f)
+    {
+        ctx->power_mode = POWER_MODE_NORMAL;
+    } 
+    else if (ctx->battery_level_pct >= 20.0f)
+    {
+        ctx->power_mode = POWER_MODE_LOW;
+    }
+    else 
+    {
+        ctx->power_mode = POWER_MODE_CRITICAL;
+    }
+
+    // 3) Log de cambios
+    if (ctx->power_mode != prev_mode)
+    {
+        ESP_LOGW(TAG, 
+                "Cambio de modo energético: %d -> %d (batería=%.1f%%)",
+                prev_mode,
+                ctx->power_mode,
+                ctx->battery_level_pct);
+    }
+    else
+    {
+        ESP_LOGI(TAG,
+                "Batería=%.1f%% | modo=%d",
+                ctx->battery_level_pct,
+                ctx->power_mode);
+    }
+}
+
+const char *power_mode_to_str(power_mode_t mode)
+{
+    switch(mode)
+    {
+        case POWER_MODE_NORMAL: 
+            return "NORMAL";
+        
+        case POWER_MODE_LOW: 
+            return "LOW";
+
+        case POWER_MODE_CRITICAL: 
+            return "CRITICAL";
+
+        default: 
+            return "UNKNOWN";
+    }
+}
+
+uint32_t power_get_sleep_interval_ms(const system_ctx_t *ctx, uint32_t default_ms)
+{
+    if (!ctx)
+    {
+        ESP_LOGW(TAG, "power_get_sleep_interval_ms(): ctx es NULL, usando valor por defecto");
+        return default_ms;
+    }
+
+    // Ajustamos el tiempo de deep sleep según modo energético para reducir el consumo
+    switch (ctx->power_mode)
+    {
+        case POWER_MODE_NORMAL:
+            return default_ms;
+        
+        case POWER_MODE_LOW:
+            return default_ms * 2U; // la U significa unsigned, recomendado ponerlo por temas de limpieza en la operación
+        
+        case POWER_MODE_CRITICAL:
+            return default_ms * 4U;
+        
+        default: 
+            return default_ms;
+    }
 }

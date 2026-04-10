@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "power_types.h"
 #include "fsm.h"
 
 // Inicializa el estado persistente si es el primer arranque
@@ -21,3 +22,12 @@ const char *power_get_wakeup_cause_str(void);
 
 // Indica si el último arranque proviene de un wakeup por temporizador
 bool power_is_wakeup_from_timer(void);
+
+// Actualiza el nivel de batería simulado y recalcula el modo energético del sistema
+void power_update_battery_and_mode(system_ctx_t * ctx);
+
+// Convierte el modo energético a una cadena de texto para facilitar logs y depuración
+const char *power_mode_to_str(power_mode_t mode);
+
+// Devuelve el tiempo de deep sleep en función del modo energético actual
+uint32_t power_get_sleep_interval_ms(const system_ctx_t *ctx, uint32_t default_ms);

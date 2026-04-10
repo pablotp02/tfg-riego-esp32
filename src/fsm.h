@@ -1,6 +1,8 @@
 #pragma once
+
 #include <stdbool.h>
 #include <stdint.h>
+#include "power_types.h"
 
 typedef enum {
     STATE_INIT = 0,
@@ -35,6 +37,9 @@ typedef struct {
     uint32_t cycles_since_measure;
     uint32_t cycles_since_send;
     bool pending_send;
+
+    float battery_level_pct;
+    power_mode_t power_mode;
 } system_ctx_t;
 
 // Inicializa el contexto

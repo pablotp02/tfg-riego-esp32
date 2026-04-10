@@ -129,7 +129,10 @@ void fsm_init(system_ctx_t *ctx)
         .sensor_valid = true,
         .error_reason = NULL,
         .sensor_error_count = 0,
-        .sensor_read_error_count = 0
+        .sensor_read_error_count = 0,
+
+        .battery_level_pct = 100.0f,
+        .power_mode = POWER_MODE_NORMAL
     };
 
     ESP_LOGI(TAG, "TFG Riego - arranque OK (ESP-IDF).");
@@ -160,7 +163,13 @@ void fsm_step(system_ctx_t *ctx)
             break;
         }
 
-        // Aquí iría: NVS, config, GPIO, etc.
+        // Actualizamos batería simulada y modo energético al inicio de cada ciclo
+        power_update_battery_and_mode(ctx);
+
+        ESP_LOGI(TAG, "[POWER] battery=%.1f%% | mode=%s",
+                    ctx->battery_level_pct,
+                    power_mode_to_str(ctx->power_mode));
+
         ctx->state = STATE_SCHEDULE;
         break;
 
@@ -251,12 +260,20 @@ void fsm_step(system_ctx_t *ctx)
                                                 ctx->irrigate_request,
                                                 &reason);
 
+        // En modo energético crítico, el riego queda bloqueado para priorizar la autonomía
+        if (ctx->power_mode == POWER_MODE_CRITICAL && ctx->irrigate_request)
+        {
+            ctx->irrigate_request = false;
+            reason = "bloqueo: modo energético crítico";
+        }
+
         ESP_LOGI(TAG,
-                 "[DECIDE] suelo_start=%.1f%% | suelo_stop=%.1f%% | T=%.1fC | H=%.1f%% -> riego=%s (%s)",
+                 "[DECIDE] suelo_start=%.1f%% | suelo_stop=%.1f%% | T=%.1fC | H=%.1f%% | mode=%s -> riego=%s (%s)",
                  cfg->soil_start_irrigation_pct,
                  cfg->soil_stop_irrigation_pct,
                  ctx->last.temperature_c,
                  ctx->last.humidity_pct,
+                 power_mode_to_str(ctx->power_mode),
                  ctx->irrigate_request ? "SI" : "NO",
                  reason ? reason : "sin motivo");
         
@@ -318,14 +335,18 @@ void fsm_step(system_ctx_t *ctx)
     }
 
     case STATE_SLEEP:
-        ESP_LOGI(TAG, "[SLEEP] Entrando en deep sleep hasta el siguiente ciclo (%lu ms)...",
-                (unsigned long)cfg->measure_period_ms);
+        uint32_t sleep_ms = power_get_sleep_interval_ms(ctx, cfg->measure_period_ms);
+
+        ESP_LOGI(TAG, "[SLEEP] Entrando en deep sleep (%lu ms) | battery=%.1f%% | mode=%s",
+                (unsigned long)sleep_ms,
+                ctx->battery_level_pct,
+                power_mode_to_str(ctx->power_mode));
 
         //Guardamos en RTC los campos persistentes antes de dormir
         power_store_ctx_to_rtc(ctx);
 
         // Entramos en deep sleep con wakeup por timer
-        power_enter_deep_sleep(cfg->measure_period_ms);
+        power_enter_deep_sleep(sleep_ms);
 
         // Si todo va bien, no debería volver nunca de esta función
         ESP_LOGW(TAG, "[SLEEP] Retorno inesperado desde power_enter_deep_sleep()");
