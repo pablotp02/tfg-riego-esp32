@@ -17,10 +17,9 @@ typedef enum {
     STATE_ERROR
 } system_state_t;
 
+// Estructura simplificada para representar la humedad del suelo
 typedef struct {
     float soil_moisture_pct;  // 0..100
-    float temperature_c;      // ºC
-    float humidity_pct;       // 0..100
 } sensor_data_t;
 
 typedef struct {

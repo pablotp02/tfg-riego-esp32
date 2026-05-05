@@ -100,7 +100,6 @@ bool sensors_adc_init(void)
 sensor_data_t sensors_adc_read(void)
 {
     int raw_moist = read_adc_raw(SOIL_MOIST_GPIO);
-    int raw_temp  = read_adc_raw(SOIL_TEMP_GPIO);
 
     // mV solo para el de humedad, para no liar logs
     int mv_moist = -1;
@@ -112,27 +111,24 @@ sensor_data_t sensors_adc_read(void)
     // Humedad suelo (provisional, escala lineal)
     float soil_pct = (raw_moist * 100.0f) / 4095.0f;
 
-    // Temperatura suelo (provisoinal) 0 a 50ºC
-    float soil_temp_c = (raw_temp * 50.0f) / 4095.0f;
-
-    ESP_LOGI(TAG, "[ADC] moist_raw=%d %s | temp_raw=%d", raw_moist, (mv_moist >= 0) ? "" : "(sin mV)", raw_temp);
+    ESP_LOGI(TAG, "[ADC] moist_raw=%d %s",
+            raw_moist,
+            (mv_moist >= 0) ? "" : "(sin mV)");
 
     if (mv_moist >= 0)
     {
-        ESP_LOGI(TAG, "[ADC] moist=%d mV | soil_pct(prov)=%.1f%% | soil_temp(prov)=%.1fºC", mv_moist, soil_pct, soil_temp_c);
+        ESP_LOGI(TAG, "[ADC] moist=%d mV | soil_pct(prov)=%.1f%%",
+                mv_moist, soil_pct);
     }
-    else 
+    else
     {
-        ESP_LOGI(TAG, "[ADC] soil_pct(prov)=%.1f%% | soil_temp(prov)=%.1fºC", soil_pct, soil_temp_c);
+        ESP_LOGI(TAG, "[ADC] soil_pct(prov)=%.1f%%", soil_pct);
     }
 
     sensor_data_t d = 
     {
-        .soil_moisture_pct = soil_pct,
-        .temperature_c     = soil_temp_c, // temperatura de suelo
-        .humidity_pct      = 50.0f        // lo pisa DHT22 en sensors.c
+        .soil_moisture_pct = soil_pct
     };
 
     return d;
-
 }

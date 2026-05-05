@@ -1,5 +1,4 @@
 #include "fsm.h"
-#include "dht22_test.h" 
 #include "power.h"
 #include "esp_log.h"
 

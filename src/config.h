@@ -6,9 +6,7 @@
 #include "driver/uart.h"
 
 // PINES
-#define DHT22_GPIO      GPIO_NUM_27
 #define SOIL_MOIST_GPIO GPIO_NUM_34 // potenciómetro 1 -> humedad suelo
-#define SOIL_TEMP_GPIO  GPIO_NUM_35 // potenciómetro 2 -> temperatura suelo
 
 // RS485 / MODBUS (SEN0604 + DFR0845)
 #define RS485_UART_PORT  (UART_NUM_2)
@@ -18,7 +16,7 @@
 #define RS485_SLAVE_ADDR (0x01)
 
 // Umbrales ambientales provisionales (se ajustarán por especie/planta)
-#define SOIL_MIN_TEMP_C  (5.0f)  // por debajo, no regar
+#define SOIL_MIN_TEMP_C  (5.0f)  // por debajo, no regar 
 #define AIR_MAX_HUM_PCT  (95.0f) // por encima, no regar
 
 typedef struct {

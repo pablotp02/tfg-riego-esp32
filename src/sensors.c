@@ -2,7 +2,6 @@
 #include "config.h"
 #include "sensors_sim.h"
 #include "sensors_adc.h"
-#include "sensors_dht22.h"
 #include "sen0604.h"
 
 #include "esp_log.h"
@@ -10,15 +9,9 @@
 
 static const char *TAG = "SENSORS";
 
-// Caché de la última lectura válida del DHT22 (estados internos del módulo)
-static bool s_have_dht22 = false;   // la 's_' indica que es estático a nivel de fichero 
-static float s_last_air_temp_c = 25.0f; // (static file-scope)
-static float s_last_air_hum_pct = 50.0f;
-
 // Caché para SEN0604
 static bool s_have_sen0604 = false;
 static float s_last_soil_moist_pct = 0.0f;
-static float s_last_soil_temp_c = 25.0f;
 static float s_last_ph = 0.0f;
 static float s_last_ec = 0.0f;
 
@@ -46,16 +39,14 @@ sensor_data_t sensors_read(void)
             s_last_rs485_read_ok = true;
 
             d.soil_moisture_pct = sen.soil_moisture_pct;
-            d.temperature_c = sen.soil_temp_c;
 
             s_last_soil_moist_pct = sen.soil_moisture_pct;
-            s_last_soil_temp_c = sen.soil_temp_c;
             s_last_ph = sen.ph;
             s_last_ec = sen.ec_us_cm;
             s_have_sen0604 = true;
 
-            ESP_LOGI(TAG, "[SEN0604] suelo=%.1f%% | temp_suelo=%.1fC | pH=%.1f | EC=%.0f",
-                     sen.soil_moisture_pct, sen.soil_temp_c, sen.ph, sen.ec_us_cm);
+            ESP_LOGI(TAG, "[SEN0604] suelo=%.1f%% | pH=%.1f | EC=%.0f",
+                     sen.soil_moisture_pct, sen.ph, sen.ec_us_cm);
         } 
         else 
         {
@@ -69,14 +60,12 @@ sensor_data_t sensors_read(void)
             {
                 // Si ya hubo una lectura válida antes, reutilizamos el último valor bueno
                 d.soil_moisture_pct = s_last_soil_moist_pct;
-                d.temperature_c = s_last_soil_temp_c;
             }
             else 
             {
                 // Si nunca hubo una lectura válida del sensor, devolvemos datos inválidos
                 // para que la FSM no tome decisiones de riego a ciegas
                 d.soil_moisture_pct = -1.0f;
-                d.temperature_c = -100.0f;
             }
         }
     } 
@@ -85,28 +74,7 @@ sensor_data_t sensors_read(void)
         d = sensors_adc_read();
     }
 
-    // 3) DHT22 -> humedad ambiente
-    float t = 0.0f, h = 0.0f;
-    esp_err_t err = dht22_read(DHT22_GPIO, &t, &h);
-
-    if (err == ESP_OK) 
-    {
-        s_last_air_temp_c = t;
-        s_last_air_hum_pct = h;
-        s_have_dht22 = true;
-        ESP_LOGI(TAG, "[DHT22] OK -> T=%.1fC H=%.1f%%", t, h);
-    }
-    else
-    {
-        ESP_LOGW(TAG, "[DHT22] Fallo lectura (%s). Usando último valor %s",
-                 esp_err_to_name(err),
-                 s_have_dht22 ? "válido" : "por defecto");
-    }
-
-    // 4) Mantener humidity_pct como humedad ambiente
-    d.humidity_pct = s_last_air_hum_pct;
-
-    return d;
+    return d; 
 }
 
 bool sensors_init(void)
@@ -137,9 +105,6 @@ bool sensors_init(void)
             return false;
         }
     }
-
-    // Inicialización DHT22 (temperatura y humedad ambiente)
-    sensors_dht22_init();
 
     ESP_LOGI(TAG, "Inicialización de sensores completada");
     return true;
