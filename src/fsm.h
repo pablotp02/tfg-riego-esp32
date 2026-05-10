@@ -37,6 +37,12 @@ typedef struct {
     uint32_t cycles_since_send;
     bool pending_send;
 
+    // Cooldown riego: 
+    // Cuenta los ciclos transcurridos desde el último riego
+    // Se inicializa a IRRIGATION_COOLDOWN_CYCLES para que el primer ciclo
+    // pueda regar si es necesario
+    uint32_t cycles_since_irrigated;
+
     float battery_level_pct;
     power_mode_t power_mode;
 } system_ctx_t;

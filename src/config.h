@@ -18,13 +18,19 @@
 #define RS485_SLAVE_ADDR (0x01)
 
 // Umbrales ambientales provisionales (se ajustarán por especie/planta)
-#define SOIL_MIN_TEMP_C  (5.0f)  // por debajo, no regar 
+#define SOIL_MIN_TEMP_C  (5.0f)  // por debajo, no regar
 #define AIR_MAX_HUM_PCT  (95.0f) // por encima, no regar
+
+// Cooldown de riego:
+// Número mínimo de ciclos que deben pasar entre dos riegos consecutivos.
+// Evita saturar el suelo si la humedad vuelve a bajar rápido tras un riego.
+// TODO (producción): migrar a cooldown por tiempo real (horas) usando timestamp NTP en RTC.
+#define IRRIGATION_COOLDOWN_CYCLES (3U)
 
 typedef struct {
     bool use_simulated_sensors;     // true: simulación | false: ADC real
     bool use_rs485_sensor;          // true: leer suelo por SEN0604 (RS485)
-    
+
     // Temporización (demo)
     uint32_t measure_period_ms;     // tiempo entre ciclos (demo). Luego: horas
     uint32_t irrigate_time_ms;      // tiempo de riego
@@ -33,7 +39,7 @@ typedef struct {
     uint32_t measure_every_n_cycles; // cada cuántos ciclos medir
     uint32_t send_every_n_cycles;    // cada cuántos ciclos enviar
 
-    // Umbrales 
+    // Umbrales
     float soil_start_irrigation_pct; // por debajo de este valor, pedir riego
     float soil_stop_irrigation_pct;  // por encima de este valor, dejar de regar
 

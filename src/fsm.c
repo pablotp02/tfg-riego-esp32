@@ -32,20 +32,20 @@ static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out
 
     // Si estamos usando RS485 pero aún no hay ninguna lectura válida del SEN0604,
     // no debemos interpretar los valores de suelo como datos reales
-    if (cfg->use_rs485_sensor && !sensors_have_sen0604_data()) 
+    if (cfg->use_rs485_sensor && !sensors_have_sen0604_data())
     {
         if (reason_out) *reason_out = "Lectura de suelo no disponible";
         return false;
     }
 
-    if (d->soil_moisture_pct < SOIL_MIN_PCT || d->soil_moisture_pct > SOIL_MAX_PCT) 
+    if (d->soil_moisture_pct < SOIL_MIN_PCT || d->soil_moisture_pct > SOIL_MAX_PCT)
     {
         if (reason_out) *reason_out = "Humedad de suelo fuera de rango";
         return false;
     }
 
     // Validación adicional solo si ya hay datos válidos del SEN0604
-    if (sensors_have_sen0604_data()) 
+    if (sensors_have_sen0604_data())
     {
         float ph = sensors_get_last_ph();
         float ec = sensors_get_last_ec();
@@ -56,7 +56,7 @@ static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out
             return false;
         }
 
-        if (ec < EC_MIN_US_CM || ec > EC_MAX_US_CM) 
+        if (ec < EC_MIN_US_CM || ec > EC_MAX_US_CM)
         {
             if (reason_out) *reason_out = "EC fuera de rango (dato inválido)";
             return false;
@@ -72,7 +72,7 @@ static bool decide_irrigation(const sensor_data_t *d,
                                  float soil_stop_pct,
                                  bool was_irrigating,
                                  const char **reason_out)
-{   
+{
     // Regla 1: histéresis por humedad de suelo
     if (d->soil_moisture_pct < soil_start_pct)
     {
@@ -91,6 +91,15 @@ static bool decide_irrigation(const sensor_data_t *d,
     return was_irrigating;
 }
 
+// Comprueba si el cooldown de riego está activo.
+// Devuelve true si hay que bloquear el riego, false si se puede regar.
+// Encapsulado en su propia función para facilitar la futura migración
+// a cooldown por tiempo real (NTP + timestamp en RTC).
+static bool irrigation_cooldown_active(const system_ctx_t *ctx)
+{
+    return (ctx->cycles_since_irrigated < IRRIGATION_COOLDOWN_CYCLES);
+}
+
 void fsm_init(system_ctx_t *ctx)
 {
     *ctx = (system_ctx_t){
@@ -104,6 +113,10 @@ void fsm_init(system_ctx_t *ctx)
         .error_reason = NULL,
         .sensor_error_count = 0,
         .sensor_read_error_count = 0,
+
+        // Arranca ya con el cooldown cumplido para que el primer ciclo
+        // pueda regar si las condiciones lo requieren
+        .cycles_since_irrigated = IRRIGATION_COOLDOWN_CYCLES,
 
         .battery_level_pct = 100.0f,
         .power_mode = POWER_MODE_NORMAL
@@ -120,7 +133,7 @@ void fsm_step(system_ctx_t *ctx)
     {
     case STATE_INIT:
         ESP_LOGI(TAG, "[INIT] Inicializando sistema...");
-        
+
         ESP_LOGI(TAG, "[CFG] period=%lums irrig=%lums measure_n=%lu send_n=%lu soil_start=%.1f%% soil_stop=%.1f%%",
             (unsigned long)cfg->measure_period_ms,
             (unsigned long)cfg->irrigate_time_ms,
@@ -192,7 +205,7 @@ void fsm_step(system_ctx_t *ctx)
                 ctx->pending_send ? "SI" : "NO",
                 power_mode_to_str(ctx->power_mode),
                 (unsigned long)send_every_n);
-        
+
         break;
     }
 
@@ -212,25 +225,25 @@ void fsm_step(system_ctx_t *ctx)
                 ctx->sensor_read_error_count++;
             }
         }
-        else // si cambiamos de modo reseteamos contador
+        else
         {
             ctx->sensor_read_error_count = 0;
         }
 
         ESP_LOGI(TAG, "[MEASURE] suelo=%.1f%%", ctx->last.soil_moisture_pct);
-        
+
         ctx->state = STATE_VALIDATE;
         break;
 
     case STATE_VALIDATE:
         ctx->sensor_valid = validate_sensor_data(&ctx->last, &ctx->error_reason);
-        if (ctx->sensor_valid) 
+        if (ctx->sensor_valid)
         {
             ctx->sensor_error_count = 0;
             ESP_LOGI(TAG, "[VALIDATE] Datos OK.");
             ctx->state = STATE_DECIDE;
-        } 
-        else 
+        }
+        else
         {
             ctx->sensor_error_count++;
             ESP_LOGW(TAG, "[VALIDATE] Datos INVALIDOS: %s (errores seguidos: %lu)",
@@ -249,6 +262,17 @@ void fsm_step(system_ctx_t *ctx)
                                                 ctx->irrigate_request,
                                                 &reason);
 
+        // Bloqueo por cooldown: no regar si aún no han pasado suficientes ciclos
+        // desde el último riego.
+        if (ctx->irrigate_request && irrigation_cooldown_active(ctx))
+        {
+            ctx->irrigate_request = false;
+            reason = "bloqueo: cooldown activo";
+            ESP_LOGW(TAG, "[DECIDE] Riego bloqueado por cooldown (%lu/%u ciclos)",
+                    (unsigned long)ctx->cycles_since_irrigated,
+                    IRRIGATION_COOLDOWN_CYCLES);
+        }
+
         // En modo energético crítico, el riego queda bloqueado para priorizar la autonomía
         if (ctx->power_mode == POWER_MODE_CRITICAL && ctx->irrigate_request)
         {
@@ -256,21 +280,27 @@ void fsm_step(system_ctx_t *ctx)
             reason = "bloqueo: modo energético crítico";
         }
 
-        ESP_LOGI(TAG, 
-                    "[DECIDE]: suelo_start=%.1f%% | suelo_stop=%.1f%% | suelo=%.1f%% | mode=%s -> riego=%s (%s)",
+        ESP_LOGI(TAG,
+                    "[DECIDE]: suelo_start=%.1f%% | suelo_stop=%.1f%% | suelo=%.1f%% | mode=%s | cooldown=%lu/%u -> riego=%s (%s)",
                     cfg->soil_start_irrigation_pct,
                     cfg->soil_stop_irrigation_pct,
                     ctx->last.soil_moisture_pct,
                     power_mode_to_str(ctx->power_mode),
+                    (unsigned long)ctx->cycles_since_irrigated,
+                    IRRIGATION_COOLDOWN_CYCLES,
                     ctx->irrigate_request ? "SI" : "NO",
                     reason ? reason : "sin motivo");
-        
+
         ctx->state = ctx->irrigate_request ? STATE_IRRIGATE : STATE_LOG;
         break;
     }
 
     case STATE_IRRIGATE:
         actuators_irrigate(cfg->irrigate_time_ms);
+        // Resetear cooldown: el contador vuelve a 0 tras cada riego
+        ctx->cycles_since_irrigated = 0;
+        ESP_LOGI(TAG, "[IRRIGATE] Cooldown reseteado. Próximo riego en %u ciclos mínimo.",
+                IRRIGATION_COOLDOWN_CYCLES);
         ctx->state = STATE_LOG;
         break;
 
@@ -284,32 +314,36 @@ void fsm_step(system_ctx_t *ctx)
         break;
 
     case STATE_SEND:
-    {// las llaves dentro del case son porque hemos declarado variables locales (evita problemas de alcance)
+    {
         bool have_soil_extra = sensors_have_sen0604_data();
         float ph = sensors_get_last_ph();
         float ec = sensors_get_last_ec();
 
-        if (have_soil_extra) 
+        if (have_soil_extra)
         {
-            ESP_LOGI(TAG, 
-                    "[SEND] payload -> suelo=%.1f%% | pH=%.1f | EC=%.0f | riego=%s | valid=%s | err_val=%lu | err_read=%lu",
+            ESP_LOGI(TAG,
+                    "[SEND] payload -> suelo=%.1f%% | pH=%.1f | EC=%.0f | riego=%s | valid=%s | err_val=%lu | err_read=%lu | cooldown=%lu/%u",
                     ctx->last.soil_moisture_pct,
-                    ph, 
-                    ec, 
+                    ph,
+                    ec,
                     ctx->irrigate_request ? "SI" : "NO",
                     ctx->sensor_valid ? "SI" : "NO",
                     (unsigned long)ctx->sensor_error_count,
-                    (unsigned long)ctx->sensor_read_error_count);
+                    (unsigned long)ctx->sensor_read_error_count,
+                    (unsigned long)ctx->cycles_since_irrigated,
+                    IRRIGATION_COOLDOWN_CYCLES);
         }
         else
         {
-            ESP_LOGI(TAG, 
-                    "[SEND] payload -> suelo=%.1f%% | pH=N/A | EC=N/A | riego=%s | valid=%s | err_val=%lu | err_read=%lu",
+            ESP_LOGI(TAG,
+                    "[SEND] payload -> suelo=%.1f%% | pH=N/A | EC=N/A | riego=%s | valid=%s | err_val=%lu | err_read=%lu | cooldown=%lu/%u",
                     ctx->last.soil_moisture_pct,
-                    ctx->irrigate_request ? "SI" : "NO", 
-                    ctx->sensor_valid ? "SI" : "NO", 
+                    ctx->irrigate_request ? "SI" : "NO",
+                    ctx->sensor_valid ? "SI" : "NO",
                     (unsigned long)ctx->sensor_error_count,
-                    (unsigned long)ctx->sensor_read_error_count);
+                    (unsigned long)ctx->sensor_read_error_count,
+                    (unsigned long)ctx->cycles_since_irrigated,
+                    IRRIGATION_COOLDOWN_CYCLES);
         }
 
         vTaskDelay(pdMS_TO_TICKS(300));
@@ -319,14 +353,25 @@ void fsm_step(system_ctx_t *ctx)
     }
 
     case STATE_SLEEP:
+    {
         uint32_t sleep_ms = power_get_sleep_interval_ms(ctx, cfg->measure_period_ms);
+
+        // Incrementar cooldown antes de dormir, para que cada deep sleep
+        // cuente como un ciclo transcurrido desde el último riego
+        if (ctx->cycles_since_irrigated < IRRIGATION_COOLDOWN_CYCLES)
+        {
+            ctx->cycles_since_irrigated++;
+            ESP_LOGI(TAG, "[SLEEP] Cooldown: %lu/%u ciclos",
+                    (unsigned long)ctx->cycles_since_irrigated,
+                    IRRIGATION_COOLDOWN_CYCLES);
+        }
 
         ESP_LOGI(TAG, "[SLEEP] Entrando en deep sleep (%lu ms) | battery=%.1f%% | mode=%s",
                 (unsigned long)sleep_ms,
                 ctx->battery_level_pct,
                 power_mode_to_str(ctx->power_mode));
 
-        //Guardamos en RTC los campos persistentes antes de dormir
+        // Guardamos en RTC los campos persistentes antes de dormir
         power_store_ctx_to_rtc(ctx);
 
         // Entramos en deep sleep con wakeup por timer
@@ -335,6 +380,7 @@ void fsm_step(system_ctx_t *ctx)
         // Si todo va bien, no debería volver nunca de esta función
         ESP_LOGW(TAG, "[SLEEP] Retorno inesperado desde power_enter_deep_sleep()");
         break;
+    }
 
     case STATE_ERROR:
         ESP_LOGE(TAG, "[ERROR] %s", ctx->error_reason ? ctx->error_reason : "Error desconocido");
