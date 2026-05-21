@@ -165,35 +165,53 @@ void power_update_battery_and_mode(system_ctx_t *ctx)
         return;
     }
 
-    float consumption = 0.0f;
+    #if ENABLE_BATTERY_SIMULATION
+        // simulación activa: consumo por ciclo según modo energético actual
+        float consumption = 0.0f;
 
-    switch (ctx->power_mode)
-    {
-        case POWER_MODE_NORMAL:   consumption = 10.0f; break;
-        case POWER_MODE_LOW:      consumption = 5.0f;  break;
-        case POWER_MODE_CRITICAL: consumption = 2.0f;  break;
-        default:                  consumption = 1.0f;  break;
-    }
+        switch (ctx->power_mode)
+        {
+            case POWER_MODE_NORMAL:   consumption = 10.0f; break;
+            case POWER_MODE_LOW:      consumption = 5.0f;  break;
+            case POWER_MODE_CRITICAL: consumption = 2.0f;  break;
+            default:                  consumption = 1.0f;  break;
+        }
 
-    ctx->battery_level_pct -= consumption;
-    if (ctx->battery_level_pct < 0.0f) ctx->battery_level_pct = 0.0f;
+        ctx->battery_level_pct -= consumption;
+        if (ctx->battery_level_pct < 0.0f) ctx->battery_level_pct = 0.0f;
 
-    power_mode_t prev_mode = ctx->power_mode;
+        power_mode_t prev_mode = ctx->power_mode;
 
-    if      (ctx->battery_level_pct >= 50.0f) ctx->power_mode = POWER_MODE_NORMAL;
-    else if (ctx->battery_level_pct >= 20.0f) ctx->power_mode = POWER_MODE_LOW;
-    else                                       ctx->power_mode = POWER_MODE_CRITICAL;
+        if      (ctx->battery_level_pct >= 50.0f) ctx->power_mode = POWER_MODE_NORMAL;
+        else if (ctx->battery_level_pct >= 20.0f) ctx->power_mode = POWER_MODE_LOW;
+        else                                       ctx->power_mode = POWER_MODE_CRITICAL;
 
-    if (ctx->power_mode != prev_mode)
-    {
-        ESP_LOGW(TAG,
-                "Cambio de modo energético: %d -> %d (batería=%.1f%%)",
-                prev_mode, ctx->power_mode, ctx->battery_level_pct);
-    }
-    else
-    {
-        ESP_LOGI(TAG, "Batería=%.1f%% | modo=%d", ctx->battery_level_pct, ctx->power_mode);
-    }
+        if (ctx->power_mode != prev_mode)
+        {
+            ESP_LOGW(TAG,
+                    "Cambio de modo energético: %s -> %s (batería=%.1f%%)",
+                    power_mode_to_str(prev_mode),
+                    power_mode_to_str(ctx->power_mode),
+                    ctx->battery_level_pct);
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Batería=%.1f%% | modo=%s", 
+                ctx->battery_level_pct, 
+                power_mode_to_str(ctx->power_mode));
+        }
+
+    #else 
+        // simulación desactivada: batería fija al 100%, modo siempre NORMAL
+        // usar durante desarrollo para evitar bloqueos artificiales por batería
+        // TODO: reemplazar por lectura ADC real cuando se integre el hardware de batería
+
+        ctx->battery_level_pct = 100.0f;
+        ctx->power_mode        = POWER_MODE_NORMAL;
+
+        ESP_LOGI(TAG, "Batería simulada deshabilitada | battery=100.0%% | modo=NORMAL");
+    
+        #endif
 }
 
 const char *power_mode_to_str(power_mode_t mode)

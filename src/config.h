@@ -8,7 +8,7 @@
 // PINES
 #define SOIL_MOIST_GPIO GPIO_NUM_34 // potenciómetro 1 -> humedad suelo
 #define RELAY_GPIO GPIO_NUM_25 // se puede cambiar el numero más adelante
-#define ENABLE_REAL_RELAY 0
+#define ENABLE_REAL_RELAY 1
 
 // RS485 / MODBUS (SEN0604 + DFR0845)
 #define RS485_UART_PORT  (UART_NUM_2)
@@ -26,6 +26,15 @@
 // Evita saturar el suelo si la humedad vuelve a bajar rápido tras un riego.
 // TODO (producción): migrar a cooldown por tiempo real (horas) usando timestamp NTP en RTC.
 #define IRRIGATION_COOLDOWN_CYCLES (3U)
+
+/* Simulación de batería:
+    0 -> batería fija al 100%, modo energético siempre NORMAL
+        Usar durante desarrollo y pruebas para evitar bloqueos artificiales
+    1 -> simulación activa: la batería se consume por ciclo y el modo energético cambia según el nivel.
+        Útil para probar la lógica de gestión energética
+    TODO: reemplazar por medición real de batería vía ADC (divisor de tensión o módulo INA219)
+*/
+#define ENABLE_BATTERY_SIMULATION 0
 
 typedef struct {
     bool use_simulated_sensors;     // true: simulación | false: ADC real
