@@ -73,6 +73,15 @@ static bool decide_irrigation(const sensor_data_t *d,
                                  bool was_irrigating,
                                  const char **reason_out)
 {
+    // Regla 0: temperatura de suelo mínima
+    // Si la temperatura del suelo es demasiado baja, no regar
+    // independientemente de la humedad (riesgo daño a las raíces)
+    if (d->soil_temp_c < SOIL_MIN_TEMP_C)
+    {
+        if (reason_out) *reason_out = "temperatura del suelo demasiado baja";
+        return false;
+    }
+
     // Regla 1: histéresis por humedad de suelo
     if (d->soil_moisture_pct < soil_start_pct)
     {
@@ -230,7 +239,9 @@ void fsm_step(system_ctx_t *ctx)
             ctx->sensor_read_error_count = 0;
         }
 
-        ESP_LOGI(TAG, "[MEASURE] suelo=%.1f%%", ctx->last.soil_moisture_pct);
+        ESP_LOGI(TAG, "[MEASURE] suelo=%.1f%% | temp=%.1fC",
+                 ctx->last.soil_moisture_pct,
+                 ctx->last.soil_temp_c);
 
         ctx->state = STATE_VALIDATE;
         break;
@@ -281,10 +292,11 @@ void fsm_step(system_ctx_t *ctx)
         }
 
         ESP_LOGI(TAG,
-                    "[DECIDE]: suelo_start=%.1f%% | suelo_stop=%.1f%% | suelo=%.1f%% | mode=%s | cooldown=%lu/%u -> riego=%s (%s)",
+                    "[DECIDE]: suelo_start=%.1f%% | suelo_stop=%.1f%% | suelo=%.1f%% | temp=%.1fC | mode=%s | cooldown=%lu/%u -> riego=%s (%s)",
                     cfg->soil_start_irrigation_pct,
                     cfg->soil_stop_irrigation_pct,
                     ctx->last.soil_moisture_pct,
+                    ctx->last.soil_temp_c,
                     power_mode_to_str(ctx->power_mode),
                     (unsigned long)ctx->cycles_since_irrigated,
                     IRRIGATION_COOLDOWN_CYCLES,

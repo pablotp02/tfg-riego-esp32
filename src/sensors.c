@@ -12,6 +12,7 @@ static const char *TAG = "SENSORS";
 // Caché para SEN0604
 static bool s_have_sen0604 = false;
 static float s_last_soil_moist_pct = 0.0f;
+static float s_last_soil_temp_c = 0.0f;
 static float s_last_ph = 0.0f;
 static float s_last_ec = 0.0f;
 
@@ -39,8 +40,10 @@ sensor_data_t sensors_read(void)
             s_last_rs485_read_ok = true;
 
             d.soil_moisture_pct = sen.soil_moisture_pct;
+            d.soil_temp_c = sen.soil_temp_c;
 
             s_last_soil_moist_pct = sen.soil_moisture_pct;
+            s_last_soil_temp_c = sen.soil_temp_c;
             s_last_ph = sen.ph;
             s_last_ec = sen.ec_us_cm;
             s_have_sen0604 = true;
@@ -60,6 +63,7 @@ sensor_data_t sensors_read(void)
             {
                 // Si ya hubo una lectura válida antes, reutilizamos el último valor bueno
                 d.soil_moisture_pct = s_last_soil_moist_pct;
+                d.soil_temp_c = s_last_soil_temp_c;
             }
             else 
             {
