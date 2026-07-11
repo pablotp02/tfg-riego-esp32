@@ -3,3 +3,11 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# Backend Python
+backend/venv/
+backend/__pycache__/
+backend/routers/__pycache__/
+
+# Variables de entorno (contiene credenciales)
+.env
