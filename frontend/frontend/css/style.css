@@ -1,0 +1,277 @@
+/* ─── Reset y base ─────────────────────────────────────────── */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f4f8;
+    color: #2d3748;
+    min-height: 100vh;
+}
+
+/* ─── Header ────────────────────────────────────────────────── */
+header {
+    background: linear-gradient(135deg, #2d6a4f, #40916c);
+    color: white;
+    padding: 20px 40px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+header h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+}
+
+.status-badge {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background-color: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.4);
+}
+
+.status-badge.online {
+    background-color: #52b788;
+    border-color: #52b788;
+}
+
+.status-badge.offline {
+    background-color: #e63946;
+    border-color: #e63946;
+}
+
+/* ─── Main ──────────────────────────────────────────────────── */
+main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 30px 40px;
+}
+
+/* ─── Section titles ────────────────────────────────────────── */
+.section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 30px 0 16px 0;
+}
+
+.section-title h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2d6a4f;
+    border-left: 4px solid #40916c;
+    padding-left: 12px;
+}
+
+.last-update {
+    font-size: 0.8rem;
+    color: #718096;
+}
+
+/* ─── Tarjetas de estado ────────────────────────────────────── */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.card-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+.card-label {
+    font-size: 0.78rem;
+    color: #718096;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.card-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d6a4f;
+    line-height: 1;
+}
+
+.card-unit {
+    font-size: 0.8rem;
+    color: #718096;
+    margin-top: 4px;
+}
+
+.card-mode {
+    font-size: 1.1rem;
+}
+
+.card-mode.normal { color: #2d6a4f; }
+.card-mode.low    { color: #f4a261; }
+.card-mode.critical { color: #e63946; }
+
+/* ─── Gráficas ──────────────────────────────────────────────── */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 20px;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+}
+
+.chart-card h3 {
+    font-size: 0.9rem;
+    color: #718096;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ─── Tabla de riegos ───────────────────────────────────────── */
+.table-section {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+thead th {
+    text-align: left;
+    padding: 10px 16px;
+    background-color: #f7fafc;
+    color: #718096;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f4f8;
+    color: #2d3748;
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+tbody tr:hover {
+    background-color: #f7fafc;
+}
+
+.badge-si {
+    background-color: #c7f9cc;
+    color: #2d6a4f;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-no {
+    background-color: #ffe8e8;
+    color: #e63946;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* ─── Alertas ───────────────────────────────────────────────── */
+.alerts-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.no-alerts {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    color: #718096;
+    border: 1px solid #e2e8f0;
+}
+
+.alert-item {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    border-left: 4px solid #f4a261;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert-item.critical {
+    border-left-color: #e63946;
+}
+
+.alert-type {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #2d3748;
+}
+
+.alert-message {
+    font-size: 0.85rem;
+    color: #718096;
+    margin-top: 4px;
+}
+
+.alert-date {
+    font-size: 0.78rem;
+    color: #a0aec0;
+}
+
+/* ─── Footer ────────────────────────────────────────────────── */
+footer {
+    text-align: center;
+    padding: 20px;
+    color: #a0aec0;
+    font-size: 0.8rem;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 40px;
+}

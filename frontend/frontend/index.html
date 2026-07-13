@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TFG Riego Automático</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-content">
+            <h1>🌱 Sistema de Riego Automático</h1>
+            <div class="status-badge" id="status-badge">Conectando...</div>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- TARJETAS DE ESTADO ACTUAL -->
+        <section class="section-title">
+            <h2>Estado actual</h2>
+            <span class="last-update" id="last-update">--</span>
+        </section>
+
+        <section class="cards-grid">
+            <div class="card">
+                <div class="card-icon">💧</div>
+                <div class="card-label">Humedad suelo</div>
+                <div class="card-value" id="val-moisture">--</div>
+                <div class="card-unit">%</div>
+            </div>
+            <div class="card">
+                <div class="card-icon">🌡️</div>
+                <div class="card-label">Temperatura suelo</div>
+                <div class="card-value" id="val-temp">--</div>
+                <div class="card-unit">ºC</div>
+            </div>
+            <div class="card">
+                <div class="card-icon">🧪</div>
+                <div class="card-label">pH</div>
+                <div class="card-value" id="val-ph">--</div>
+                <div class="card-unit"></div>
+            </div>
+            <div class="card">
+                <div class="card-icon">⚡</div>
+                <div class="card-label">Conductividad (EC)</div>
+                <div class="card-value" id="val-ec">--</div>
+                <div class="card-unit">uS/cm</div>
+            </div>
+            <div class="card">
+                <div class="card-icon">🔋</div>
+                <div class="card-label">Batería</div>
+                <div class="card-value" id="val-battery">--</div>
+                <div class="card-unit">%</div>
+            </div>
+            <div class="card">
+                <div class="card-icon">⚙️</div>
+                <div class="card-label">Modo energético</div>
+                <div class="card-value card-mode" id="val-mode">--</div>
+                <div class="card-unit"></div>
+            </div>
+        </section>
+
+        <!-- GRÁFICAS -->
+        <section class="section-title">
+            <h2>Histórico de medidas</h2>
+        </section>
+
+        <section class="charts-grid">
+            <div class="chart-card">
+                <h3>Humedad del suelo (%)</h3>
+                <canvas id="chart-moisture"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Temperatura del suelo (ºC)</h3>
+                <canvas id="chart-temp"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>pH</h3>
+                <canvas id="chart-ph"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Conductividad EC (uS/cm)</h3>
+                <canvas id="chart-ec"></canvas>
+            </div>
+        </section>
+
+        <!-- HISTORIAL DE RIEGOS -->
+        <section class="section-title">
+            <h2>Historial de riegos</h2>
+        </section>
+
+        <section class="table-section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha y hora</th>
+                        <th>Regó</th>
+                        <th>Duración</th>
+                        <th>Motivo</th>
+                    </tr>
+                </thead>
+                <tbody id="irrigation-table">
+                    <tr><td colspan="4">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ALERTAS -->
+        <section class="section-title">
+            <h2>Alertas</h2>
+        </section>
+
+        <section class="alerts-section" id="alerts-container">
+            <p class="no-alerts">Sin alertas pendientes</p>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>TFG Sistema de Riego Automático con ESP32 — Pablo</p>
+    </footer>
+
+    <script src="js/main.js"></script>
+
+</body>
+</html>
