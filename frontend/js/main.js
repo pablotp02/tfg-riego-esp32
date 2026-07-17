@@ -94,20 +94,26 @@ async function updateCurrentState() {
 // ─── Actualizar batería y modo desde cycles ───────────────────
 async function updatePowerState() {
     try {
-        const res = await fetch(`${API_URL}/api/cycles/?limit=1`);
+        // Consultamos el último estado energético registrado
+        // usando el nuevo endpoint /api/power/latest
+        const res = await fetch(`${API_URL}/api/power/latest`);
         if (!res.ok) return;
         const data = await res.json();
-        if (!data.length) return;
 
-        // El power_id del último ciclo nos da el estado energético
-        // Por simplicidad mostramos el modo del último ciclo
-        const cycle = data[0];
+        // Usamos la batería real si está disponible (INA219),
+        // si no usamos la simulada como fallback
+        const battery = data.battery_pct_real !== null
+            ? data.battery_pct_real
+            : data.battery_pct_simulated;
+        document.getElementById('val-battery').textContent =
+            battery !== null ? battery.toFixed(1) : '--';
+
+        // Mostramos el modo energético con su clase CSS correspondiente
+        // 0: NORMAL (verde), 1: LOW (naranja), 2: CRITICAL (rojo)
         const modeEl = document.getElementById('val-mode');
-
-        // Buscamos el estado de batería desde el último ciclo
-        // (el backend no expone power directamente, usamos cycles)
-        document.getElementById('val-battery').textContent = '--';
-        modeEl.textContent = '--';
+        modeEl.textContent = modeToString(data.power_mode);
+        modeEl.className = 'card-value card-mode ' +
+            (['normal', 'low', 'critical'][data.power_mode] || 'normal');
 
     } catch (e) {
         console.error(e);
@@ -198,6 +204,7 @@ async function updateAlerts() {
 async function refresh() {
     await Promise.all([
         updateCurrentState(),
+        updatePowerState(),
         updateCharts(),
         updateIrrigationTable(),
         updateAlerts()
