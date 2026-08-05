@@ -9,6 +9,7 @@
 #include "actuators.h"
 #include "logger.h"
 #include "power.h"
+#include "ina219.h"
 
 // Rangos válidos (provisionales) para validación
 #define SOIL_MIN_PCT   (0.0f)
@@ -158,6 +159,15 @@ void fsm_step(system_ctx_t *ctx)
             ctx->state = STATE_ERROR;
             break;
         }
+
+        #if !ENABLE_BATTERY_SIMULATION
+            esp_err_t ina_err = ina219_init();
+            if (ina_err != ESP_OK)
+            {
+                ESP_LOGW(TAG, "[INIT]: INA219A no disponible: %s - se usará último valor conocido",
+                        esp_err_to_name(ina_err));
+            }
+        #endif
 
         // Actualizamos batería simulada y modo energético al inicio de cada ciclo
         power_update_battery_and_mode(ctx);

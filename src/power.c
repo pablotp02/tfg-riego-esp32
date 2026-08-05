@@ -4,6 +4,7 @@
 #include "esp_sleep.h"
 #include "esp_log.h"
 #include "esp_attr.h"
+#include "ina219.h"
 
 static const char *TAG = "POWER";
 
@@ -202,16 +203,36 @@ void power_update_battery_and_mode(system_ctx_t *ctx)
         }
 
     #else 
-        // simulación desactivada: batería fija al 100%, modo siempre NORMAL
-        // usar durante desarrollo para evitar bloqueos artificiales por batería
-        // TODO: reemplazar por lectura ADC real cuando se integre el hardware de batería
+        // Medición real de batería mediante INA219
+        float voltage = 0.0f;
+        esp_err_t err = ina219_read_bus_voltage(&voltage);
 
-        ctx->battery_level_pct = 100.0f;
-        ctx->power_mode        = POWER_MODE_NORMAL;
+        if (err == ESP_OK)
+        {
+            ctx->battery_level_pct = ina219_voltage_to_pct(voltage);
+            ESP_LOGI(TAG, "Batería real: %.3fV -> %.1f%%", voltage, ctx->battery_level_pct);
+        }
+        else
+        {
+            // Si falla la lectura, mantenemos el último valor conocido
+            ESP_LOGW(TAG, "Fallo en la lectura INA219, usando último valor: %.1f%%", ctx->battery_level_pct);
+        }
 
-        ESP_LOGI(TAG, "Batería simulada deshabilitada | battery=100.0%% | modo=NORMAL");
-    
-        #endif
+        // Actualizar modo energético según nivel de batería real
+        power_mode_t prev_mode = ctx->power_mode;
+
+        if      (ctx->battery_level_pct >= 50.0f) ctx->power_mode = POWER_MODE_NORMAL;
+        else if (ctx->battery_level_pct >= 20.0f) ctx->power_mode = POWER_MODE_LOW;
+        else                                      ctx->power_mode = POWER_MODE_CRITICAL;
+
+        if (ctx->power_mode != prev_mode)
+        {
+            ESP_LOGW(TAG, "Cambio de modo energético: %s -> %s (batería=%.1f%%)", 
+                    power_mode_to_str(prev_mode),
+                    power_mode_to_str(ctx->power_mode),
+                    ctx->battery_level_pct);
+        }
+    #endif
 }
 
 const char *power_mode_to_str(power_mode_t mode)
