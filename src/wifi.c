@@ -23,6 +23,7 @@ static const char *TAG = "WIFI";
 static EventGroupHandle_t s_wifi_event_group = NULL;
 static bool s_connected = false;
 static int s_retry_count = 0;
+static bool s_intentional_disconnect = false; // Bandera para evitar reintentar conexión tras desconexión intencional
 #define WIFI_MAX_RETRY (3)
 
 // ─── Manejador de eventos WiFi ────────────────────────────────
@@ -36,7 +37,13 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
         s_connected = false;
-        if (s_retry_count < WIFI_MAX_RETRY)
+
+        if (s_intentional_disconnect)
+        {
+            // Desconexión provocada por wifi_disconnect(), no reintentar
+            ESP_LOGI(TAG, "Desconexión intencionada, sin reintentos");
+        }
+        else if (s_retry_count < WIFI_MAX_RETRY)
         {
             esp_wifi_connect();
             s_retry_count++;
@@ -59,6 +66,9 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
 // ─── Conexión WiFi con timeout ────────────────────────────────
 esp_err_t wifi_connect(void)
 {
+    // Reset por si el ciclo anterior terminó en desconexión intencional
+    s_intentional_disconnect = false;
+
     s_wifi_event_group = xEventGroupCreate();
 
     esp_err_t err = esp_netif_init();
@@ -132,6 +142,7 @@ void wifi_disconnect(void)
 {
     if (s_connected)
     {
+        s_intentional_disconnect = true; // Marcar como intencional antes de desconectar
         esp_wifi_disconnect();
         esp_wifi_stop();
         s_connected = false;
