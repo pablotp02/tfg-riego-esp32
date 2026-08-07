@@ -11,3 +11,6 @@ backend/routers/__pycache__/
 
 # Variables de entorno (contiene credenciales)
 .env
+
+# Credenciales WiFi y backend (privado, no subir)
+src/credentials.h

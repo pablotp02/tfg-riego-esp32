@@ -11,6 +11,9 @@
 #include "power.h"
 #include "ina219.h"
 
+#include "wifi.h"
+#include "http_client.h"
+
 // Rangos válidos (provisionales) para validación
 #define SOIL_MIN_PCT   (0.0f)
 #define SOIL_MAX_PCT   (100.0f)
@@ -366,6 +369,28 @@ void fsm_step(system_ctx_t *ctx)
                     (unsigned long)ctx->sensor_read_error_count,
                     (unsigned long)ctx->cycles_since_irrigated,
                     IRRIGATION_COOLDOWN_CYCLES);
+        }
+
+        // Conectar WiFi y enviar el payload al backend.
+        // Si falla la conexión o el envío, el sistema continúa sin
+        // bloquearse - se reintentará en el siguiente ciclo con pending_send.
+        esp_err_t wifi_err = wifi_connect();
+        if (wifi_err == ESP_OK)
+        {
+            esp_err_t send_err = http_send_cycle(ctx);
+            if (send_err == ESP_OK)
+            {
+                ESP_LOGI(TAG, "[SEND] Datos enviados correctamente al backend");
+            }
+            else
+            {
+                ESP_LOGW(TAG, "[SEND] Fallo al enviar datos al backend, se reintentará en el próximo ciclo con envío pendiente");
+            }
+            wifi_disconnect();
+        }
+        else
+        {
+            ESP_LOGW(TAG, "[SEND] Sin conexión WiFi, se reintentará en el próximo ciclo con envío pendiente");
         }
 
         vTaskDelay(pdMS_TO_TICKS(300));

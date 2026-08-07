@@ -1,15 +1,22 @@
 #include "fsm.h"
 #include "power.h"
 #include "esp_log.h"
+#include "nvs_flash.h"
 
 static const char *TAG = "MAIN";
 
 void app_main(void)
 {
- /* dht22_test_start();
-    return; // solo para la prueba del dht22 y no arrancar la fsm */
-
     system_ctx_t ctx;
+
+    // 0) Inicializar NVS (necesario para el WiFi)
+    esp_err_t nvs_err = nvs_flash_init();
+    if (nvs_err == ESP_ERR_NVS_NO_FREE_PAGES || nvs_err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        nvs_err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(nvs_err);
 
     // 1) Inicializar estado persistente de energía / RTC
     power_init_persistent_state();
