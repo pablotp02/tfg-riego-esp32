@@ -521,12 +521,12 @@ footer {
 
 /* ─── Botones de acción en tarjetas de planta ──────────────── */
 .btn-edit {
-    background: #e6f0ff;
-    color: #1a56b3;
-    border: 1px solid #c3d9f7;
+    background: #fff3cd;
+    color: #8a6d1f;
+    border: 1px solid #ffe69c;
 }
 .btn-edit:hover {
-    background: #d0e2ff;
+    background: #ffecb3;
 }
 .btn-delete {
     background: #ffe8e8;
@@ -535,4 +535,25 @@ footer {
 }
 .btn-delete:hover {
     background: #ffd6d6;
+}
+
+/* ─── Botón "Aplicar cambios" (planta activa) ──────────────── */
+.btn-activate {
+    background: #d3f2e0;
+    color: #1b4332;
+    border: 1px solid #a8e6c1;
+}
+.btn-activate:hover {
+    background: #bdeccf;
+}
+
+/* ─── Modal de aviso (sustituye a alert() nativo) ──────────── */
+.info-modal-body {
+    padding: 20px 22px;
+}
+.info-modal-body p {
+    font-size: 0.9rem;
+    color: #2d3748;
+    line-height: 1.6;
+    white-space: pre-line;
 }

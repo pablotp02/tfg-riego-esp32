@@ -8,6 +8,19 @@ const modalWarning    = document.getElementById('modal-warning');
 const plantForm       = document.getElementById('plant-form');
 const statusBadge = document.getElementById('status-badge');
 
+const infoModalOverlay = document.getElementById('info-modal-overlay');
+const infoModalMessage = document.getElementById('info-modal-message');
+const infoModalOk      = document.getElementById('info-modal-ok');
+
+function showInfoModal(message) {
+    infoModalMessage.innerHTML = message;
+    infoModalOverlay.classList.add('visible');
+}
+infoModalOk.addEventListener('click', () => infoModalOverlay.classList.remove('visible'));
+infoModalOverlay.addEventListener('click', (e) => {
+    if (e.target === infoModalOverlay) infoModalOverlay.classList.remove('visible');
+});
+
 function setOnline(online) {
     statusBadge.textContent = online ? 'Online' : 'Sin datos';
     statusBadge.className = 'status-badge ' + (online ? 'online' : 'offline');
@@ -67,7 +80,7 @@ function renderPlantCard(plant) {
         : '<span class="badge-no">Inactiva</span>';
 
     const activateBtn = plant.is_active
-        ? `<button class="btn-secondary btn-small" onclick="activatePlant(${plant.id})">Reaplicar config</button>`
+        ? `<button class="btn-activate btn-small" onclick="activatePlant(${plant.id})">Aplicar cambios</button>`
         : `<button class="btn-secondary btn-small" onclick="activatePlant(${plant.id})">Activar</button>`;
 
     return `
@@ -81,8 +94,8 @@ function renderPlantCard(plant) {
                 Parada riego: ${plant.soil_stop_irrigation_pct}%<br>
                 Temp. mínima: ${plant.soil_min_temp_c}ºC &middot;
                 Cooldown: ${plant.irrigation_cooldown_cycles} ciclos<br>
-                Medida: ${plant.measure_period_ms} ms &middot;
-                Riego: ${plant.irrigate_time_ms} ms
+                Medida: ${plant.measure_period_ms / 1000}s &middot;
+                Riego: ${plant.irrigate_time_ms / 1000}s
             </div>
             <div class="plant-card-actions">
                 ${activateBtn}
@@ -99,7 +112,7 @@ async function activatePlant(id) {
         loadActivePlant();
         loadPlantsList();
     } catch (err) {
-        alert('Error al activar la planta');
+        showInfoModal('Error al activar la planta');
     }
 }
 
@@ -110,7 +123,7 @@ async function deletePlant(id, name) {
         loadActivePlant();
         loadPlantsList();
     } catch (err) {
-        alert('Error al eliminar la planta');
+        showInfoModal('Error al eliminar la planta');
     }
 }
 
@@ -122,7 +135,7 @@ async function editPlant(id) {
         if (!plant) return;
         openModal('edit', plant);
     } catch (err) {
-        alert('Error al cargar los datos de la planta');
+        showInfoModal('Error al cargar los datos de la planta');
     }
 }
 
@@ -148,8 +161,8 @@ function openModal(mode, plant = null) {
         document.getElementById('f-stop').value     = plant.soil_stop_irrigation_pct;
         document.getElementById('f-mintemp').value  = plant.soil_min_temp_c;
         document.getElementById('f-cooldown').value = plant.irrigation_cooldown_cycles;
-        document.getElementById('f-measure').value  = plant.measure_period_ms;
-        document.getElementById('f-irrigate').value = plant.irrigate_time_ms;
+        document.getElementById('f-measure').value  = plant.measure_period_ms / 1000;
+        document.getElementById('f-irrigate').value = plant.irrigate_time_ms / 1000;
 
         if (plant.id === currentActiveId) {
             modalWarning.classList.remove('hidden');
@@ -169,15 +182,16 @@ plantForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const id = document.getElementById('plant-id').value;
+    const wasEditingActivePlant = id && parseInt(id) === currentActiveId;
 
     const payload = {
         name: document.getElementById('f-name').value,
-        soil_start_irrigation_pct: parseFloat(document.getElementById('f-start').value),
-        soil_stop_irrigation_pct:  parseFloat(document.getElementById('f-stop').value),
-        soil_min_temp_c:           parseFloat(document.getElementById('f-mintemp').value),
+        soil_start_irrigation_pct:  parseFloat(document.getElementById('f-start').value),
+        soil_stop_irrigation_pct:   parseFloat(document.getElementById('f-stop').value),
+        soil_min_temp_c:            parseFloat(document.getElementById('f-mintemp').value),
         irrigation_cooldown_cycles: parseInt(document.getElementById('f-cooldown').value),
-        measure_period_ms:         parseInt(document.getElementById('f-measure').value),
-        irrigate_time_ms:          parseInt(document.getElementById('f-irrigate').value),
+        measure_period_ms:          parseInt(document.getElementById('f-measure').value) * 1000,
+        irrigate_time_ms:           parseInt(document.getElementById('f-irrigate').value) * 1000,
     };
 
     try {
@@ -197,7 +211,15 @@ plantForm.addEventListener('submit', async (e) => {
         closeModal();
         loadActivePlant();
         loadPlantsList();
+
+        // Si se editó la planta activa, los cambios NO llegan solos al
+        // dispositivo (ver decisión de diseño: editar y activar son
+        // acciones independientes). Avisamos con un pop-up para que
+        // no pase desapercibido.
+        if (wasEditingActivePlant) {
+            showInfoModal('Cambios guardados.\n\nEsta planta está activa. Pulsa <strong>Aplicar cambios</strong> en su tarjeta para enviar esta configuración al dispositivo.');
+        }
     } catch (err) {
-        alert('Error al guardar la planta');
+        showInfoModal('Error al guardar la planta');
     }
 });

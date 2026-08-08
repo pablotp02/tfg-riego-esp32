@@ -70,7 +70,7 @@
             </div>
 
             <div id="modal-warning" class="modal-warning hidden">
-                Esta planta está activa. Guarda los cambios y vuelve a pulsar <strong>Activar</strong> para aplicarlos al dispositivo.
+                Esta planta está activa. Tras guardar, pulsa <strong>"Aplicar cambios"</strong> en su tarjeta para enviarlos al dispositivo.
             </div>
 
             <form id="plant-form">
@@ -91,10 +91,10 @@
                 <label>Cooldown de riego (ciclos)</label>
                 <input type="number" step="1" id="f-cooldown" required>
 
-                <label>Periodo de medida (ms)</label>
+                <label>Periodo de medida (s)</label>
                 <input type="number" step="1" id="f-measure" required>
 
-                <label>Duración de riego (ms)</label>
+                <label>Duración de riego (s)</label>
                 <input type="number" step="1" id="f-irrigate" required>
 
                 <div class="modal-actions">
@@ -102,6 +102,21 @@
                     <button type="submit" class="btn-primary">Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE AVISO (reemplaza a alert() nativo) -->
+    <div class="modal-overlay" id="info-modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>Aviso</span>
+            </div>
+            <div class="info-modal-body">
+                <p id="info-modal-message"></p>
+                <div class="modal-actions">
+                    <button type="button" class="btn-primary" id="info-modal-ok">Entendido</button>
+                </div>
+            </div>
         </div>
     </div>
 
