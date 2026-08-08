@@ -1,5 +1,6 @@
 #include "fsm.h"
 #include "config.h"
+#include "device_config.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -71,16 +72,19 @@ static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out
     return true;
 }
 
+// Ahora recibe soil_min_temp_c como parámetro (viene de ctx->device_cfg)
+// en lugar de usar la constante fija SOIL_MIN_TEMP_C de config.h
 static bool decide_irrigation(const sensor_data_t *d,
                                  float soil_start_pct,
                                  float soil_stop_pct,
+                                 float soil_min_temp_c,
                                  bool was_irrigating,
                                  const char **reason_out)
 {
     // Regla 0: temperatura de suelo mínima
     // Si la temperatura del suelo es demasiado baja, no regar
     // independientemente de la humedad (riesgo daño a las raíces)
-    if (d->soil_temp_c < SOIL_MIN_TEMP_C)
+    if (d->soil_temp_c < soil_min_temp_c)
     {
         if (reason_out) *reason_out = "temperatura del suelo demasiado baja";
         return false;
@@ -106,11 +110,11 @@ static bool decide_irrigation(const sensor_data_t *d,
 
 // Comprueba si el cooldown de riego está activo.
 // Devuelve true si hay que bloquear el riego, false si se puede regar.
-// Encapsulado en su propia función para facilitar la futura migración
-// a cooldown por tiempo real (NTP + timestamp en RTC).
+// Usa ctx->device_cfg.irrigation_cooldown_cycles (configurable remotamente)
+// en lugar de la constante fija IRRIGATION_COOLDOWN_CYCLES.
 static bool irrigation_cooldown_active(const system_ctx_t *ctx)
 {
-    return (ctx->cycles_since_irrigated < IRRIGATION_COOLDOWN_CYCLES);
+    return (ctx->cycles_since_irrigated < ctx->device_cfg.irrigation_cooldown_cycles);
 }
 
 void fsm_init(system_ctx_t *ctx)
@@ -127,13 +131,20 @@ void fsm_init(system_ctx_t *ctx)
         .sensor_error_count = 0,
         .sensor_read_error_count = 0,
 
-        // Arranca ya con el cooldown cumplido para que el primer ciclo
-        // pueda regar si las condiciones lo requieren
-        .cycles_since_irrigated = IRRIGATION_COOLDOWN_CYCLES,
-
         .battery_level_pct = 100.0f,
-        .power_mode = POWER_MODE_NORMAL
+        .power_mode = POWER_MODE_NORMAL,
+
+        // Sin sincronización todavía en este arranque
+        .device_cfg_synced = false
     };
+
+    // Configuración por defecto como último recurso. Si hay algo válido
+    // en RTC, power_restore_ctx_from_rtc() lo sobreescribirá justo después.
+    device_config_get_defaults(&ctx->device_cfg);
+
+    // Arranca con el cooldown cumplido para que el primer ciclo pueda
+    // regar si las condiciones lo requieren
+    ctx->cycles_since_irrigated = ctx->device_cfg.irrigation_cooldown_cycles;
 
     ESP_LOGI(TAG, "TFG Riego - arranque OK (ESP-IDF).");
 }
@@ -146,14 +157,6 @@ void fsm_step(system_ctx_t *ctx)
     {
     case STATE_INIT:
         ESP_LOGI(TAG, "[INIT] Inicializando sistema...");
-
-        ESP_LOGI(TAG, "[CFG] period=%lums irrig=%lums measure_n=%lu send_n=%lu soil_start=%.1f%% soil_stop=%.1f%%",
-            (unsigned long)cfg->measure_period_ms,
-            (unsigned long)cfg->irrigate_time_ms,
-            (unsigned long)cfg->measure_every_n_cycles,
-            (unsigned long)cfg->send_every_n_cycles,
-            cfg->soil_start_irrigation_pct,
-            cfg->soil_stop_irrigation_pct);
 
         if (!sensors_init())
         {
@@ -171,6 +174,49 @@ void fsm_step(system_ctx_t *ctx)
                         esp_err_to_name(ina_err));
             }
         #endif
+
+        // Sincronización de configuración remota:
+        // Intentamos conectar WiFi y pedir la configuración activa al backend.
+        // Si no hay conexión o falla la petición, se mantiene la configuración
+        // restaurada desde RTC (o los valores por defecto si nunca hubo
+        // sincronización previa, ya establecidos en fsm_init).
+        ctx->device_cfg_synced = false;
+
+        esp_err_t wifi_cfg_err = wifi_connect();
+        if (wifi_cfg_err == ESP_OK)
+        {
+            vTaskDelay(pdMS_TO_TICKS(2000)); // pequeño margen tras conectar antes de la petición HTTP
+
+            device_config_t fetched_cfg;
+            esp_err_t cfg_err = device_config_fetch(&fetched_cfg);
+            if (cfg_err == ESP_OK)
+            {
+                ctx->device_cfg = fetched_cfg;
+                ctx->device_cfg_synced = true;
+                ESP_LOGI(TAG, "[INIT] Configuración sincronizada con el backend");
+            }
+            else
+            {
+                ESP_LOGW(TAG, "[INIT] Fallo al pedir configuración, se usa la última conocida");
+            }
+            wifi_disconnect();
+        }
+        else
+        {
+            ESP_LOGW(TAG, "[INIT] Sin WiFi, se usa configuración local (RTC o por defecto)");
+        }
+
+        ESP_LOGI(TAG,
+                "[CFG] period=%lums irrig=%lums measure_n=%lu send_n=%lu soil_start=%.1f%% soil_stop=%.1f%% min_temp=%.1fC cooldown=%lu (synced=%s)",
+                (unsigned long)ctx->device_cfg.measure_period_ms,
+                (unsigned long)ctx->device_cfg.irrigate_time_ms,
+                (unsigned long)cfg->measure_every_n_cycles,
+                (unsigned long)cfg->send_every_n_cycles,
+                ctx->device_cfg.soil_start_irrigation_pct,
+                ctx->device_cfg.soil_stop_irrigation_pct,
+                ctx->device_cfg.soil_min_temp_c,
+                (unsigned long)ctx->device_cfg.irrigation_cooldown_cycles,
+                ctx->device_cfg_synced ? "SI" : "NO");
 
         // Actualizamos batería simulada y modo energético al inicio de cada ciclo
         power_update_battery_and_mode(ctx);
@@ -281,8 +327,9 @@ void fsm_step(system_ctx_t *ctx)
         const char *reason = NULL;
 
         ctx->irrigate_request = decide_irrigation(&ctx->last,
-                                                cfg->soil_start_irrigation_pct,
-                                                cfg->soil_stop_irrigation_pct,
+                                                ctx->device_cfg.soil_start_irrigation_pct,
+                                                ctx->device_cfg.soil_stop_irrigation_pct,
+                                                ctx->device_cfg.soil_min_temp_c,
                                                 ctx->irrigate_request,
                                                 &reason);
 
@@ -292,9 +339,9 @@ void fsm_step(system_ctx_t *ctx)
         {
             ctx->irrigate_request = false;
             reason = "bloqueo: cooldown activo";
-            ESP_LOGW(TAG, "[DECIDE] Riego bloqueado por cooldown (%lu/%u ciclos)",
+            ESP_LOGW(TAG, "[DECIDE] Riego bloqueado por cooldown (%lu/%lu ciclos)",
                     (unsigned long)ctx->cycles_since_irrigated,
-                    IRRIGATION_COOLDOWN_CYCLES);
+                    (unsigned long)ctx->device_cfg.irrigation_cooldown_cycles);
         }
 
         // En modo energético crítico, el riego queda bloqueado para priorizar la autonomía
@@ -305,14 +352,14 @@ void fsm_step(system_ctx_t *ctx)
         }
 
         ESP_LOGI(TAG,
-                    "[DECIDE]: suelo_start=%.1f%% | suelo_stop=%.1f%% | suelo=%.1f%% | temp=%.1fC | mode=%s | cooldown=%lu/%u -> riego=%s (%s)",
-                    cfg->soil_start_irrigation_pct,
-                    cfg->soil_stop_irrigation_pct,
+                    "[DECIDE]: suelo_start=%.1f%% | suelo_stop=%.1f%% | suelo=%.1f%% | temp=%.1fC | mode=%s | cooldown=%lu/%lu -> riego=%s (%s)",
+                    ctx->device_cfg.soil_start_irrigation_pct,
+                    ctx->device_cfg.soil_stop_irrigation_pct,
                     ctx->last.soil_moisture_pct,
                     ctx->last.soil_temp_c,
                     power_mode_to_str(ctx->power_mode),
                     (unsigned long)ctx->cycles_since_irrigated,
-                    IRRIGATION_COOLDOWN_CYCLES,
+                    (unsigned long)ctx->device_cfg.irrigation_cooldown_cycles,
                     ctx->irrigate_request ? "SI" : "NO",
                     reason ? reason : "sin motivo");
 
@@ -321,11 +368,11 @@ void fsm_step(system_ctx_t *ctx)
     }
 
     case STATE_IRRIGATE:
-        actuators_irrigate(cfg->irrigate_time_ms);
+        actuators_irrigate(ctx->device_cfg.irrigate_time_ms);
         // Resetear cooldown: el contador vuelve a 0 tras cada riego
         ctx->cycles_since_irrigated = 0;
-        ESP_LOGI(TAG, "[IRRIGATE] Cooldown reseteado. Próximo riego en %u ciclos mínimo.",
-                IRRIGATION_COOLDOWN_CYCLES);
+        ESP_LOGI(TAG, "[IRRIGATE] Cooldown reseteado. Próximo riego en %lu ciclos mínimo.",
+                (unsigned long)ctx->device_cfg.irrigation_cooldown_cycles);
         ctx->state = STATE_LOG;
         break;
 
@@ -347,7 +394,7 @@ void fsm_step(system_ctx_t *ctx)
         if (have_soil_extra)
         {
             ESP_LOGI(TAG,
-                    "[SEND] payload -> suelo=%.1f%% | pH=%.1f | EC=%.0f | riego=%s | valid=%s | err_val=%lu | err_read=%lu | cooldown=%lu/%u",
+                    "[SEND] payload -> suelo=%.1f%% | pH=%.1f | EC=%.0f | riego=%s | valid=%s | err_val=%lu | err_read=%lu | cooldown=%lu/%lu",
                     ctx->last.soil_moisture_pct,
                     ph,
                     ec,
@@ -356,19 +403,19 @@ void fsm_step(system_ctx_t *ctx)
                     (unsigned long)ctx->sensor_error_count,
                     (unsigned long)ctx->sensor_read_error_count,
                     (unsigned long)ctx->cycles_since_irrigated,
-                    IRRIGATION_COOLDOWN_CYCLES);
+                    (unsigned long)ctx->device_cfg.irrigation_cooldown_cycles);
         }
         else
         {
             ESP_LOGI(TAG,
-                    "[SEND] payload -> suelo=%.1f%% | pH=N/A | EC=N/A | riego=%s | valid=%s | err_val=%lu | err_read=%lu | cooldown=%lu/%u",
+                    "[SEND] payload -> suelo=%.1f%% | pH=N/A | EC=N/A | riego=%s | valid=%s | err_val=%lu | err_read=%lu | cooldown=%lu/%lu",
                     ctx->last.soil_moisture_pct,
                     ctx->irrigate_request ? "SI" : "NO",
                     ctx->sensor_valid ? "SI" : "NO",
                     (unsigned long)ctx->sensor_error_count,
                     (unsigned long)ctx->sensor_read_error_count,
                     (unsigned long)ctx->cycles_since_irrigated,
-                    IRRIGATION_COOLDOWN_CYCLES);
+                    (unsigned long)ctx->device_cfg.irrigation_cooldown_cycles);
         }
 
         // Conectar WiFi y enviar el payload al backend.
@@ -401,16 +448,16 @@ void fsm_step(system_ctx_t *ctx)
 
     case STATE_SLEEP:
     {
-        uint32_t sleep_ms = power_get_sleep_interval_ms(ctx, cfg->measure_period_ms);
+        uint32_t sleep_ms = power_get_sleep_interval_ms(ctx, ctx->device_cfg.measure_period_ms);
 
         // Incrementar cooldown antes de dormir, para que cada deep sleep
         // cuente como un ciclo transcurrido desde el último riego
-        if (ctx->cycles_since_irrigated < IRRIGATION_COOLDOWN_CYCLES)
+        if (ctx->cycles_since_irrigated < ctx->device_cfg.irrigation_cooldown_cycles)
         {
             ctx->cycles_since_irrigated++;
-            ESP_LOGI(TAG, "[SLEEP] Cooldown: %lu/%u ciclos",
+            ESP_LOGI(TAG, "[SLEEP] Cooldown: %lu/%lu ciclos",
                     (unsigned long)ctx->cycles_since_irrigated,
-                    IRRIGATION_COOLDOWN_CYCLES);
+                    (unsigned long)ctx->device_cfg.irrigation_cooldown_cycles);
         }
 
         ESP_LOGI(TAG, "[SLEEP] Entrando en deep sleep (%lu ms) | battery=%.1f%% | mode=%s",

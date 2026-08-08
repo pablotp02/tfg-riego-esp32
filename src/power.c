@@ -5,6 +5,7 @@
 #include "esp_log.h"
 #include "esp_attr.h"
 #include "ina219.h"
+#include "device_config.h"
 
 static const char *TAG = "POWER";
 
@@ -20,6 +21,11 @@ typedef struct
 
     float battery_level_pct;
     power_mode_t power_mode;
+
+    // Última configuración remota sincronizada con el backend,
+    // usada como fallback cuando no hay WiFi disponible
+    device_config_t device_cfg;
+    bool device_cfg_valid; // true si device_cfg contiene una sincronización real
 } rtc_persisted_state_t;
 
 // Variable almacenada en memoria RTC, persiste tras deep sleep
@@ -33,19 +39,21 @@ RTC_DATA_ATTR static rtc_persisted_state_t s_rtc_state =
     .boot_initialized = false
 };
 
-static void rtc_state_reset_defaults(void);
+static void rtc_state_reset_defaults(void); // forward declaration
 
 static void rtc_state_reset_defaults(void)
 {
     s_rtc_state.cycle_count = 0;
     s_rtc_state.cycles_since_send = 0;
-    // Arranca con cooldown cumplido para que el primer ciclo pueda regar si procede
     s_rtc_state.cycles_since_irrigated = IRRIGATION_COOLDOWN_CYCLES;
     s_rtc_state.sensor_error_count = 0;
     s_rtc_state.sensor_read_error_count = 0;
 
     s_rtc_state.battery_level_pct = 100.0f;
     s_rtc_state.power_mode = POWER_MODE_NORMAL;
+
+    // Sin configuración sincronizada todavía
+    s_rtc_state.device_cfg_valid = false;
 
     s_rtc_state.boot_initialized = false;
 }
@@ -80,15 +88,23 @@ void power_restore_ctx_from_rtc(system_ctx_t *ctx)
     ctx->battery_level_pct        = s_rtc_state.battery_level_pct;
     ctx->power_mode               = s_rtc_state.power_mode;
 
+    // Restaurar configuración remota si hay una sincronización previa válida
+    if (s_rtc_state.device_cfg_valid)
+    {
+        ctx->device_cfg = s_rtc_state.device_cfg;
+        ctx->device_cfg_synced = false; // viene de RTC, no de una sincronización fresca
+    }
+
     ESP_LOGI(TAG,
-            "Contexto restaurado desde RTC -> cycle=%lu send_since=%lu irrigated_since=%lu err_val=%lu err_read=%lu battery=%.1f%% mode=%d",
+            "Contexto restaurado desde RTC -> cycle=%lu send_since=%lu irrigated_since=%lu err_val=%lu err_read=%lu battery=%.1f%% mode=%d cfg_valid=%s",
             (unsigned long)ctx->cycle_count,
             (unsigned long)ctx->cycles_since_send,
             (unsigned long)ctx->cycles_since_irrigated,
             (unsigned long)ctx->sensor_error_count,
             (unsigned long)ctx->sensor_read_error_count,
             ctx->battery_level_pct,
-            ctx->power_mode);
+            ctx->power_mode,
+            s_rtc_state.device_cfg_valid ? "SI" : "NO");
 }
 
 void power_store_ctx_to_rtc(const system_ctx_t *ctx)
@@ -108,15 +124,25 @@ void power_store_ctx_to_rtc(const system_ctx_t *ctx)
     s_rtc_state.battery_level_pct       = ctx->battery_level_pct;
     s_rtc_state.power_mode              = ctx->power_mode;
 
+    // Solo actualizamos la configuración guardada en RTC si este ciclo
+    // sincronizó realmente con el backend (evita sobreescribir con
+    // valores por defecto o RTC antiguos re-guardados sin cambios)
+    if (ctx->device_cfg_synced)
+    {
+        s_rtc_state.device_cfg = ctx->device_cfg;
+        s_rtc_state.device_cfg_valid = true;
+    }
+
     ESP_LOGI(TAG,
-            "Contexto guardado en RTC -> cycle=%lu send_since=%lu irrigated_since=%lu err_val=%lu err_read=%lu battery=%.1f%% mode=%d",
+            "Contexto guardado en RTC -> cycle=%lu send_since=%lu irrigated_since=%lu err_val=%lu err_read=%lu battery=%.1f%% mode=%d cfg_synced=%s",
             (unsigned long)s_rtc_state.cycle_count,
             (unsigned long)s_rtc_state.cycles_since_send,
             (unsigned long)s_rtc_state.cycles_since_irrigated,
             (unsigned long)s_rtc_state.sensor_error_count,
             (unsigned long)s_rtc_state.sensor_read_error_count,
             s_rtc_state.battery_level_pct,
-            s_rtc_state.power_mode);
+            s_rtc_state.power_mode,
+            ctx->device_cfg_synced ? "SI" : "NO");
 }
 
 const char *power_get_wakeup_cause_str(void)

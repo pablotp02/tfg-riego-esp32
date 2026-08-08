@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "power_types.h"
+#include "device_config.h"
 
 typedef enum {
     STATE_INIT = 0,
@@ -46,6 +47,14 @@ typedef struct {
 
     float battery_level_pct;
     power_mode_t power_mode;
+
+    // Configuración remota del sistema (umbrales, cooldown, tiempos)
+    device_config_t device_cfg;
+
+    // true si device_cfg viene de una sincronización con el backend en
+    // este ciclo; false si se está usando el valor guardado en RTC o
+    // los valores por defecto (sin sincronización disponible)
+    bool device_cfg_synced;
 } system_ctx_t;
 
 // Inicializa el contexto
