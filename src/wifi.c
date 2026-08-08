@@ -26,6 +26,13 @@ static int s_retry_count = 0;
 static bool s_intentional_disconnect = false; // Bandera para evitar reintentar conexión tras desconexión intencional
 #define WIFI_MAX_RETRY (3)
 
+// indica si el stack WiFi (netif, event loop, driver) ya se
+// inicializó en este arranque. La inicialización solo debe hacerse
+// una vez; las siguientes llamadas a wifi_connect() en el mismo
+// ciclo de arranque solo deben reiniciar la conexión, no recrear
+// el netif (eso provocaba el crash "duplicate key").
+static bool s_wifi_stack_initialized = false;
+
 // ─── Manejador de eventos WiFi ────────────────────────────────
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                 int32_t event_id, void *event_data)
@@ -40,7 +47,6 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
 
         if (s_intentional_disconnect)
         {
-            // Desconexión provocada por wifi_disconnect(), no reintentar
             ESP_LOGI(TAG, "Desconexión intencionada, sin reintentos");
         }
         else if (s_retry_count < WIFI_MAX_RETRY)
@@ -68,48 +74,69 @@ esp_err_t wifi_connect(void)
 {
     // Reset por si el ciclo anterior terminó en desconexión intencional
     s_intentional_disconnect = false;
+    s_retry_count = 0; // NUEVO: reiniciar contador de reintentos en cada llamada
 
-    s_wifi_event_group = xEventGroupCreate();
-
-    esp_err_t err = esp_netif_init();
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE)
+    // el grupo de eventos se crea solo una vez. Antes se creaba
+    // en cada llamada, perdiendo el handle anterior (memory leak).
+    if (s_wifi_event_group == NULL)
     {
-        ESP_LOGE(TAG, "Error en esp_netif_init: %s", esp_err_to_name(err));
-        return err;
+        s_wifi_event_group = xEventGroupCreate();
+    }
+    // limpiar bits de una conexión/desconexión anterior en este
+    // mismo arranque, para no arrastrar un estado obsoleto del ciclo previo
+    xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
+
+    // toda la inicialización "pesada" (netif, event loop, driver
+    // WiFi, registro de manejadores) solo se ejecuta una vez por arranque.
+    // Esto es lo que evita el crash: esp_netif_create_default_wifi_sta()
+    // ya no se vuelve a llamar en la segunda conexión del mismo ciclo.
+    if (!s_wifi_stack_initialized)
+    {
+        esp_err_t err = esp_netif_init();
+        if (err != ESP_OK && err != ESP_ERR_INVALID_STATE)
+        {
+            ESP_LOGE(TAG, "Error en esp_netif_init: %s", esp_err_to_name(err));
+            return err;
+        }
+
+        err = esp_event_loop_create_default();
+        if (err != ESP_OK && err != ESP_ERR_INVALID_STATE)
+        {
+            ESP_LOGE(TAG, "Error creando event loop: %s", esp_err_to_name(err));
+            return err;
+        }
+
+        esp_netif_create_default_wifi_sta();
+
+        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+        err = esp_wifi_init(&cfg);
+        if (err != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Error en esp_wifi_init: %s", esp_err_to_name(err));
+            return err;
+        }
+
+        esp_event_handler_instance_t instance_any_id;
+        esp_event_handler_instance_t instance_got_ip;
+
+        esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
+                &wifi_event_handler, NULL, &instance_any_id);
+        esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
+                &wifi_event_handler, NULL, &instance_got_ip);
+
+        wifi_config_t wifi_config = { 0 };
+        strncpy((char *)wifi_config.sta.ssid, WIFI_SSID, sizeof(wifi_config.sta.ssid) - 1);
+        strncpy((char *)wifi_config.sta.password, WIFI_PASSWORD, sizeof(wifi_config.sta.password) - 1);
+        wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+
+        esp_wifi_set_mode(WIFI_MODE_STA);
+        esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
+
+        s_wifi_stack_initialized = true; // Ya no se repetirá esta inicialización en este arranque
     }
 
-    err = esp_event_loop_create_default();
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE)
-    {
-        ESP_LOGE(TAG, "Error creando event loop: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    esp_netif_create_default_wifi_sta();
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    err = esp_wifi_init(&cfg);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Error en esp_wifi_init: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    esp_event_handler_instance_t instance_any_id;
-    esp_event_handler_instance_t instance_got_ip;
-
-    esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
-            &wifi_event_handler, NULL, &instance_any_id);
-    esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
-            &wifi_event_handler, NULL, &instance_got_ip);
-
-    wifi_config_t wifi_config = { 0 };
-    strncpy((char *)wifi_config.sta.ssid, WIFI_SSID, sizeof(wifi_config.sta.ssid) - 1);
-    strncpy((char *)wifi_config.sta.password, WIFI_PASSWORD, sizeof(wifi_config.sta.password) - 1);
-    wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-
-    esp_wifi_set_mode(WIFI_MODE_STA);
-    esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
+    // Esto sí se ejecuta en cada llamada: (re)arrancar el driver WiFi,
+    // lo que dispara WIFI_EVENT_STA_START -> esp_wifi_connect() en el handler
     esp_wifi_start();
 
     ESP_LOGI(TAG, "Conectando a WiFi: %s", WIFI_SSID);
