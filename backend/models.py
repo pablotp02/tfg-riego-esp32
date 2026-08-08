@@ -109,3 +109,23 @@ class Alert(Base):
 
     # Relaciones
     power = relationship("PowerState", back_populates="alerts")
+
+class DeviceConfig(Base):
+    __tablename__ = "device_config"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    updated_at  = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    soil_start_irrigation_pct = Column(Float, nullable=False, default=40.0)
+    soil_stop_irrigation_pct  = Column(Float, nullable=False, default=50.0)
+    soil_min_temp_c           = Column(Float, nullable=False, default=5.0)
+    irrigation_cooldown_cycles = Column(Integer, nullable=False, default=3)
+    measure_period_ms         = Column(Integer, nullable=False, default=5000)
+    irrigate_time_ms          = Column(Integer, nullable=False, default=2000)
+
+
+class DeviceSyncLog(Base):
+    __tablename__ = "device_sync_log"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    synced_at   = Column(DateTime, server_default=func.now())

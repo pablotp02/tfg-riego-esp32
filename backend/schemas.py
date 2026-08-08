@@ -118,3 +118,29 @@ class CyclePayload(BaseModel):
     cooldown_current:  Optional[int]   = None
     cooldown_required: Optional[int]   = None
     sensor_error:      Optional[str]   = None
+
+# ─── Device Config ─────────────────────────────────────────────────────────
+
+class DeviceConfigUpdate(BaseModel):
+    soil_start_irrigation_pct: float
+    soil_stop_irrigation_pct:  float
+    soil_min_temp_c:           float
+    irrigation_cooldown_cycles: int
+    measure_period_ms:         int
+    irrigate_time_ms:          int
+
+class DeviceConfigOut(DeviceConfigUpdate):
+    id:         int
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ─── Device Sync Log ────────────────────────────────────────────────────────
+
+class DeviceSyncLogOut(BaseModel):
+    id:        int
+    synced_at: datetime
+
+    class Config:
+        from_attributes = True
