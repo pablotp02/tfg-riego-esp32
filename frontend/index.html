@@ -9,9 +9,23 @@
 </head>
 <body>
 
+    <!-- SIDEBAR -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span>🌱 Menú</span>
+            <button class="sidebar-close" id="sidebar-close">✕</button>
+        </div>
+        <ul class="sidebar-links">
+            <li><a href="index.html" class="active">🏠 Dashboard</a></li>
+            <li><a href="plants.html">🌱 Plantas</a></li>
+        </ul>
+    </nav>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
     <!-- HEADER -->
     <header>
         <div class="header-content">
+            <button class="menu-toggle" id="menu-toggle">☰</button>
             <h1>🌱 Sistema de Riego Automático</h1>
             <div class="status-badge" id="status-badge">Conectando...</div>
         </div>
@@ -124,6 +138,7 @@
         <p>TFG Sistema de Riego Automático con ESP32 — Pablo</p>
     </footer>
 
+    <script src="js/sidebar.js"></script>
     <script src="js/main.js"></script>
 
 </body>
