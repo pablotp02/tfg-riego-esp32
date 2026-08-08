@@ -129,3 +129,19 @@ class DeviceSyncLog(Base):
 
     id          = Column(Integer, primary_key=True, index=True)
     synced_at   = Column(DateTime, server_default=func.now())
+
+class Plant(Base):
+    __tablename__ = "plants"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    created_at  = Column(DateTime, server_default=func.now())
+
+    name        = Column(String(64), nullable=False, unique=True)
+    is_active   = Column(Boolean, nullable=False, default=False)
+
+    soil_start_irrigation_pct = Column(Float, nullable=False)
+    soil_stop_irrigation_pct  = Column(Float, nullable=False)
+    soil_min_temp_c           = Column(Float, nullable=False)
+    irrigation_cooldown_cycles = Column(Integer, nullable=False)
+    measure_period_ms         = Column(Integer, nullable=False)
+    irrigate_time_ms          = Column(Integer, nullable=False)

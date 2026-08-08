@@ -144,3 +144,22 @@ class DeviceSyncLogOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+# ─── Plants ─────────────────────────────────────────────────────────────────
+
+class PlantCreate(BaseModel):
+    name: str
+    soil_start_irrigation_pct: float
+    soil_stop_irrigation_pct:  float
+    soil_min_temp_c:           float
+    irrigation_cooldown_cycles: int
+    measure_period_ms:         int
+    irrigate_time_ms:          int
+
+class PlantOut(PlantCreate):
+    id:         int
+    is_active:  bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
