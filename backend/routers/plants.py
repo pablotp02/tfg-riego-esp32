@@ -79,3 +79,24 @@ def delete_plant(plant_id: int, db: Session = Depends(get_db)):
     db.delete(plant)
     db.commit()
     return {"status": "ok", "message": f"Planta '{plant.name}' eliminada"}
+
+
+@router.put("/{plant_id}", response_model=schemas.PlantOut)
+def update_plant(plant_id: int, payload: schemas.PlantCreate, db: Session = Depends(get_db)):
+    """Actualiza los parámetros de una planta existente."""
+    plant = db.query(models.Plant).filter(models.Plant.id == plant_id).first()
+    if not plant:
+        raise HTTPException(status_code=404, detail="Planta no encontrada")
+
+    # Si se cambia el nombre, comprobar que no choque con otra planta
+    if payload.name != plant.name:
+        existing = db.query(models.Plant).filter(models.Plant.name == payload.name).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Ya existe una planta con ese nombre")
+
+    for field, value in payload.model_dump().items():
+        setattr(plant, field, value)
+
+    db.commit()
+    db.refresh(plant)
+    return plant

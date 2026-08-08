@@ -275,3 +275,264 @@ footer {
     border-top: 1px solid #e2e8f0;
     margin-top: 40px;
 }
+
+/* ─── Menú hamburguesa (botón en header) ───────────────────── */
+.menu-toggle {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    font-size: 1.3rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-right: 16px;
+    transition: background 0.2s;
+}
+.menu-toggle:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* ─── Sidebar ───────────────────────────────────────────────── */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 260px;
+    height: 100vh;
+    background: white;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    transition: left 0.25s ease;
+    display: flex;
+    flex-direction: column;
+}
+.sidebar.open {
+    left: 0;
+}
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #2d6a4f, #40916c);
+    color: white;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+.sidebar-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+}
+.sidebar-links {
+    list-style: none;
+    padding: 12px 0;
+}
+.sidebar-links li a {
+    display: block;
+    padding: 14px 24px;
+    color: #2d3748;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border-left: 4px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+}
+.sidebar-links li a:hover {
+    background-color: #f0f4f8;
+}
+.sidebar-links li a.active {
+    background-color: #e8f5ee;
+    border-left-color: #40916c;
+    color: #2d6a4f;
+}
+
+/* ─── Overlay oscuro tras el sidebar ───────────────────────── */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+    z-index: 999;
+}
+.sidebar-overlay.visible {
+    display: block;
+}
+
+/* ─── Botones genéricos ─────────────────────────────────────── */
+.btn-primary {
+    background: #2d6a4f;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-primary:hover {
+    background: #1b4332;
+}
+.btn-secondary {
+    background: white;
+    color: #2d3748;
+    border: 1px solid #e2e8f0;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-secondary:hover {
+    background: #f7fafc;
+}
+.btn-small {
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    border-radius: 6px;
+}
+
+/* ─── Página de plantas: dos columnas ──────────────────────── */
+.plants-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+.plants-col-title {
+    font-size: 0.95rem;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+/* ─── Tarjeta de planta ─────────────────────────────────────── */
+.plant-card {
+    background: white;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 14px;
+}
+.plant-card.is-active {
+    border: 2px solid #40916c;
+}
+.plant-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.plant-card-name {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #2d3748;
+}
+.plant-card-params {
+    font-size: 0.85rem;
+    color: #718096;
+    line-height: 1.6;
+}
+.plant-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+/* ─── Modal crear/editar planta ─────────────────────────────── */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+.modal-overlay.visible {
+    display: flex;
+}
+.modal-box {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 420px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    background: linear-gradient(135deg, #2d6a4f, #40916c);
+    color: white;
+    font-weight: 600;
+    font-size: 1.05rem;
+    border-radius: 12px 12px 0 0;
+}
+.modal-warning {
+    background: #fff8e6;
+    color: #8a6d1f;
+    font-size: 0.82rem;
+    padding: 10px 22px;
+    border-bottom: 1px solid #f0e4bd;
+}
+.modal-warning.hidden {
+    display: none;
+}
+#plant-form {
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+#plant-form label {
+    font-size: 0.8rem;
+    color: #718096;
+    margin-top: 10px;
+}
+#plant-form input {
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+/* ─── Botones de acción en tarjetas de planta ──────────────── */
+.btn-edit {
+    background: #e6f0ff;
+    color: #1a56b3;
+    border: 1px solid #c3d9f7;
+}
+.btn-edit:hover {
+    background: #d0e2ff;
+}
+.btn-delete {
+    background: #ffe8e8;
+    color: #c0392b;
+    border: 1px solid #f5c6c6;
+}
+.btn-delete:hover {
+    background: #ffd6d6;
+}

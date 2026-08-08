@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TFG Riego Automático - Plantas</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span>🌱 Menú</span>
+            <button class="sidebar-close" id="sidebar-close">✕</button>
+        </div>
+        <ul class="sidebar-links">
+            <li><a href="index.html">🏠 Dashboard</a></li>
+            <li><a href="plants.html" class="active">🌱 Plantas</a></li>
+        </ul>
+    </nav>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-content">
+            <button class="menu-toggle" id="menu-toggle">☰</button>
+            <h1>🌱 Gestión de plantas</h1>
+            <div class="status-badge" id="status-badge">Conectando...</div>
+        </div>
+    </header>
+
+    <main>
+
+        <section class="section-title">
+            <h2>Plantas</h2>
+            <button class="btn-primary" id="btn-new-plant">+ Añadir planta</button>
+        </section>
+
+        <section class="plants-grid">
+
+            <div class="plants-col">
+                <h3 class="plants-col-title">Planta activa</h3>
+                <div id="active-plant-container">
+                    <p class="no-alerts">Cargando...</p>
+                </div>
+            </div>
+
+            <div class="plants-col">
+                <h3 class="plants-col-title">Plantas guardadas</h3>
+                <div id="plants-list-container">
+                    <p class="no-alerts">Cargando...</p>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer>
+        <p>TFG Sistema de Riego Automático con ESP32 — Pablo</p>
+    </footer>
+
+    <!-- MODAL: CREAR / EDITAR PLANTA -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="modal-title">Nueva planta</span>
+                <button class="sidebar-close" id="modal-close">✕</button>
+            </div>
+
+            <div id="modal-warning" class="modal-warning hidden">
+                Esta planta está activa. Guarda los cambios y vuelve a pulsar <strong>Activar</strong> para aplicarlos al dispositivo.
+            </div>
+
+            <form id="plant-form">
+                <input type="hidden" id="plant-id">
+
+                <label>Nombre</label>
+                <input type="text" id="f-name" required>
+
+                <label>Umbral inicio riego (%)</label>
+                <input type="number" step="0.1" id="f-start" required>
+
+                <label>Umbral parada riego (%)</label>
+                <input type="number" step="0.1" id="f-stop" required>
+
+                <label>Temperatura mínima suelo (ºC)</label>
+                <input type="number" step="0.1" id="f-mintemp" required>
+
+                <label>Cooldown de riego (ciclos)</label>
+                <input type="number" step="1" id="f-cooldown" required>
+
+                <label>Periodo de medida (ms)</label>
+                <input type="number" step="1" id="f-measure" required>
+
+                <label>Duración de riego (ms)</label>
+                <input type="number" step="1" id="f-irrigate" required>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="modal-cancel">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/sidebar.js"></script>
+    <script src="js/plants.js"></script>
+
+</body>
+</html>

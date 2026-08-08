@@ -19,37 +19,53 @@ DISCONNECT_THRESHOLD_FACTOR = 3
 DISCONNECT_ALERT_COOLDOWN_MINUTES = 15
 
 
-def check_device_disconnected(db: Session):
+def get_connection_state(db: Session):
     """
-    Comprueba si ha pasado demasiado tiempo desde el último ciclo
-    recibido de la ESP32, según el measure_period_ms configurado.
-    Si es así y no hay ya una alerta reciente del mismo tipo, genera
-    una nueva alerta de desconexión.
+    Calcula si el dispositivo se considera 'conectado' según el tiempo
+    transcurrido desde el último ciclo recibido, comparado con
+    measure_period_ms configurado. No genera ninguna alerta, solo
+    devuelve el estado calculado para que lo reutilicen otras funciones.
     """
     last_cycle = db.query(models.SystemCycle)\
                     .order_by(desc(models.SystemCycle.recorded_at))\
                     .first()
 
     if not last_cycle:
-        # Nunca ha llegado ningún ciclo, no hay nada que comparar todavía
-        return
+        # Nunca ha llegado ningún ciclo todavía
+        return {
+            "online": False,
+            "last_cycle_at": None,
+            "seconds_since_last_cycle": None
+        }
 
     last_config = db.query(models.DeviceConfig)\
                      .order_by(desc(models.DeviceConfig.updated_at))\
                      .first()
 
-    # Si no hay configuración, usamos un valor por defecto conservador
     expected_period_ms = last_config.measure_period_ms if last_config else 5000
     threshold = timedelta(milliseconds=expected_period_ms * DISCONNECT_THRESHOLD_FACTOR)
 
     time_since_last_cycle = datetime.utcnow() - last_cycle.recorded_at
+    online = time_since_last_cycle <= threshold
 
-    if time_since_last_cycle <= threshold:
-        # Todo normal, el dispositivo sigue comunicando a tiempo
+    return {
+        "online": online,
+        "last_cycle_at": last_cycle.recorded_at,
+        "seconds_since_last_cycle": int(time_since_last_cycle.total_seconds())
+    }
+
+
+def check_device_disconnected(db: Session):
+    """
+    Si el dispositivo está desconectado (según get_connection_state) y no
+    hay ya una alerta reciente del mismo tipo, genera una nueva alerta
+    de desconexión.
+    """
+    state = get_connection_state(db)
+
+    if state["online"] or state["last_cycle_at"] is None:
         return
 
-    # Comprobar si ya existe una alerta de desconexión reciente para
-    # no generar una nueva en cada consulta
     recent_alert = db.query(models.Alert)\
                       .filter(models.Alert.alert_type == "DEVICE_DISCONNECTED")\
                       .order_by(desc(models.Alert.recorded_at))\
@@ -62,7 +78,7 @@ def check_device_disconnected(db: Session):
 
     new_alert = models.Alert(
         alert_type="DEVICE_DISCONNECTED",
-        message=f"Sin comunicación con la ESP32 desde hace {int(time_since_last_cycle.total_seconds() // 60)} minutos",
+        message=f"Sin comunicación con la ESP32 desde hace {state['seconds_since_last_cycle'] // 60} minutos",
         sent=False,
         channel=None,
         power_id=None
@@ -93,6 +109,15 @@ def get_pending_alerts(db: Session = Depends(get_db)):
              .order_by(models.Alert.recorded_at.desc())\
              .all()
 
+@router.get("/device-status")
+def get_device_status(db: Session = Depends(get_db)):
+    """
+    Devuelve si el dispositivo está actualmente 'online', calculado
+    a partir del tiempo transcurrido desde el último ciclo recibido.
+    Pensado para que el frontend lo consulte y refleje el estado real
+    de conectividad de la ESP32, no solo si el backend responde.
+    """
+    return get_connection_state(db)
 
 @router.patch("/{alert_id}/sent", response_model=schemas.AlertOut)
 def mark_alert_sent(alert_id: int, db: Session = Depends(get_db)):

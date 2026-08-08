@@ -85,7 +85,20 @@ async function updateCurrentState() {
             data.ec !== null ? Math.round(data.ec) : '--';
 
         lastUpdate.textContent = 'Última lectura: ' + formatDate(data.recorded_at);
-        setOnline(true);
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// Comprueba la conectividad real de la ESP32,
+// usando el endpoint que calcula el estado según el tiempo
+// transcurrido desde el último ciclo recibido y measure_period_ms
+async function updateOnlineStatus() {
+    try {
+        const res = await fetch(`${API_URL}/api/alerts/device-status`);
+        if (!res.ok) throw new Error('Sin datos');
+        const data = await res.json();
+        setOnline(data.online);
     } catch {
         setOnline(false);
     }
@@ -204,6 +217,7 @@ async function updateAlerts() {
 async function refresh() {
     await Promise.all([
         updateCurrentState(),
+        updateOnlineStatus(),
         updatePowerState(),
         updateCharts(),
         updateIrrigationTable(),
