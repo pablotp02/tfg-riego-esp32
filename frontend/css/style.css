@@ -587,3 +587,31 @@ footer {
     font-size: 0.8rem;
     font-weight: 600;
 }
+
+/* ─── Tarjeta de estado de sincronización ───────────────────── */
+.sync-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.sync-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.sync-card-row {
+    font-size: 0.9rem;
+    color: #2d3748;
+}
+.sync-card-row strong {
+    color: #718096;
+    font-weight: 600;
+    margin-right: 6px;
+}

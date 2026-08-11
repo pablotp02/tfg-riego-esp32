@@ -38,8 +38,15 @@ async function updateOnlineStatus() {
     }
 }
 
+function toLocalDate(isoString) {
+    // El backend guarda las fechas en UTC pero sin indicarlo en el texto.
+    // Añadimos la "Z" para que JavaScript lo interprete como UTC y lo
+    // convierta correctamente a la hora local del usuario.
+    return new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z');
+}
+
 function formatDate(isoString) {
-    const d = new Date(isoString);
+    const d = toLocalDate(isoString);
     return d.toLocaleString('es-ES', {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit'

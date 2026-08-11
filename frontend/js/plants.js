@@ -73,8 +73,10 @@ let currentActiveId = null;
 
 loadActivePlant();
 loadPlantsList();
+loadSyncStatus();
 updateOnlineStatus();
 setInterval(updateOnlineStatus, 10000);
+setInterval(loadSyncStatus, 10000);
 
 async function loadActivePlant() {
     try {
@@ -106,6 +108,66 @@ async function loadPlantsList() {
         listContainer.innerHTML = plants.map(p => renderPlantCard(p)).join('');
     } catch (err) {
         listContainer.innerHTML = '<p class="no-alerts">Error al cargar las plantas</p>';
+    }
+}
+
+function toLocalDate(isoString) {
+    // El backend guarda las fechas en UTC pero sin indicarlo en el texto
+    // (ej. "2026-08-11T21:24:01"). Añadimos la "Z" para decirle a
+    // JavaScript que interprete el texto como UTC; a partir de ahí, el
+    // propio navegador se encarga de convertirlo a la hora local del
+    // usuario, incluyendo el ajuste automático de horario de verano/invierno.
+    return new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z');
+}
+
+function formatRelativeTime(isoString) {
+    const diffMs = Date.now() - toLocalDate(isoString).getTime();
+    const diffMin = Math.round(diffMs / 60000);
+
+    if (diffMin < 1) return 'hace unos segundos';
+    if (diffMin === 1) return 'hace 1 minuto';
+    if (diffMin < 60) return `hace ${diffMin} minutos`;
+
+    const diffHours = Math.round(diffMin / 60);
+    if (diffHours === 1) return 'hace 1 hora';
+    if (diffHours < 24) return `hace ${diffHours} horas`;
+
+    const diffDays = Math.round(diffHours / 24);
+    return diffDays === 1 ? 'hace 1 día' : `hace ${diffDays} días`;
+}
+
+async function loadSyncStatus() {
+    const container = document.getElementById('sync-status-container');
+    try {
+        const res = await fetch(`${API_URL}/api/config/sync-status`);
+
+        if (res.status === 404) {
+            container.innerHTML = '<p class="no-alerts">Aún no hay ninguna configuración enviada al dispositivo</p>';
+            return;
+        }
+        if (!res.ok) throw new Error('Error al consultar el estado');
+
+        const data = await res.json();
+
+        const syncedBadge = data.is_synced
+            ? '<span class="badge-si">Sincronizado</span>'
+            : '<span class="badge-pendiente">Pendiente de sincronizar</span>';
+
+        const lastSyncText = data.last_sync_at
+            ? `${formatRelativeTime(data.last_sync_at)}`
+            : 'nunca solicitada';
+
+        container.innerHTML = `
+            <div class="sync-card">
+                <div class="sync-card-info">
+                    <div class="sync-card-row"><strong>Última sincronización solicitada por el dispositivo:</strong> ${lastSyncText}</div>
+                    <div class="sync-card-row"><strong>Última configuración aplicada desde la app:</strong> ${formatRelativeTime(data.last_config_updated_at)}</div>
+                </div>
+                ${syncedBadge}
+            </div>
+        `;
+    } catch (err) {
+        container.innerHTML = '<p class="no-alerts">Error al cargar el estado de sincronización</p>';
     }
 }
 
@@ -163,6 +225,7 @@ async function activatePlant(id, wasAlreadyActive) {
 
         loadActivePlant();
         loadPlantsList();
+        loadSyncStatus();
 
         // Verificamos con el propio dato que devuelve el backend, en vez
         // de asumir éxito solo porque la petición HTTP no dio error
