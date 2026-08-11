@@ -21,6 +21,37 @@ infoModalOverlay.addEventListener('click', (e) => {
     if (e.target === infoModalOverlay) infoModalOverlay.classList.remove('visible');
 });
 
+const confirmModalOverlay = document.getElementById('confirm-modal-overlay');
+const confirmModalMessage = document.getElementById('confirm-modal-message');
+const confirmModalOk      = document.getElementById('confirm-modal-ok');
+const confirmModalCancel  = document.getElementById('confirm-modal-cancel');
+
+let confirmModalCallback = null;
+
+function showConfirmModal(message, onConfirm) {
+    confirmModalMessage.textContent = message;
+    confirmModalCallback = onConfirm;
+    confirmModalOverlay.classList.add('visible');
+}
+
+confirmModalOk.addEventListener('click', () => {
+    confirmModalOverlay.classList.remove('visible');
+    if (confirmModalCallback) confirmModalCallback();
+    confirmModalCallback = null;
+});
+
+confirmModalCancel.addEventListener('click', () => {
+    confirmModalOverlay.classList.remove('visible');
+    confirmModalCallback = null;
+});
+
+confirmModalOverlay.addEventListener('click', (e) => {
+    if (e.target === confirmModalOverlay) {
+        confirmModalOverlay.classList.remove('visible');
+        confirmModalCallback = null;
+    }
+});
+
 function setOnline(online) {
     statusBadge.textContent = online ? 'Online' : 'Sin datos';
     statusBadge.className = 'status-badge ' + (online ? 'online' : 'offline');
@@ -81,7 +112,7 @@ function renderPlantCard(plant) {
 
     const activateBtn = plant.is_active
         ? `<button class="btn-activate btn-small" onclick="activatePlant(${plant.id})">Aplicar cambios</button>`
-        : `<button class="btn-secondary btn-small" onclick="activatePlant(${plant.id})">Activar</button>`;
+        : `<button class="btn-activar btn-small" onclick="activatePlant(${plant.id})">Activar</button>`;
 
     return `
         <div class="plant-card ${plant.is_active ? 'is-active' : ''}">
@@ -117,14 +148,15 @@ async function activatePlant(id) {
 }
 
 async function deletePlant(id, name) {
-    if (!confirm(`¿Eliminar la planta "${name}"?`)) return;
-    try {
-        await fetch(`${API_URL}/api/plants/${id}`, { method: 'DELETE' });
-        loadActivePlant();
-        loadPlantsList();
-    } catch (err) {
-        showInfoModal('Error al eliminar la planta');
-    }
+    showConfirmModal(`¿Eliminar la planta "${name}"?`, async () => {
+        try {
+            await fetch(`${API_URL}/api/plants/${id}`, { method: 'DELETE' });
+            loadActivePlant();
+            loadPlantsList();
+        } catch (err) {
+            showInfoModal('Error al eliminar la planta');
+        }
+    });
 }
 
 async function editPlant(id) {
@@ -184,14 +216,39 @@ plantForm.addEventListener('submit', async (e) => {
     const id = document.getElementById('plant-id').value;
     const wasEditingActivePlant = id && parseInt(id) === currentActiveId;
 
+    // Validación de rangos antes de construir el payload, como segunda
+    // capa de seguridad además de los atributos min/max del HTML
+    const start    = parseFloat(document.getElementById('f-start').value);
+    const stop     = parseFloat(document.getElementById('f-stop').value);
+    const cooldown = parseInt(document.getElementById('f-cooldown').value);
+    const measure  = parseInt(document.getElementById('f-measure').value);
+    const irrigate = parseInt(document.getElementById('f-irrigate').value);
+
+    if (start < 0 || start > 100 || stop < 0 || stop > 100) {
+        showInfoModal('Los umbrales de riego deben estar entre 0% y 100%.');
+        return;
+    }
+    if (start >= stop) {
+        showInfoModal('El umbral de inicio de riego debe ser menor que el umbral de parada de riego.');
+        return;
+    }
+    if (cooldown < 0 || cooldown > 5) {
+        showInfoModal('El cooldown debe estar entre 0 y 5 ciclos, ya que cada ciclo puede representar varias horas de espera entre riegos.');
+        return;
+    }
+    if (measure < 1 || irrigate < 1) {
+        showInfoModal('El periodo de medida y la duración de riego deben ser de al menos 1 segundo.');
+        return;
+    }
+
     const payload = {
         name: document.getElementById('f-name').value,
-        soil_start_irrigation_pct:  parseFloat(document.getElementById('f-start').value),
-        soil_stop_irrigation_pct:   parseFloat(document.getElementById('f-stop').value),
+        soil_start_irrigation_pct:  start,
+        soil_stop_irrigation_pct:   stop,
         soil_min_temp_c:            parseFloat(document.getElementById('f-mintemp').value),
-        irrigation_cooldown_cycles: parseInt(document.getElementById('f-cooldown').value),
-        measure_period_ms:          parseInt(document.getElementById('f-measure').value) * 1000,
-        irrigate_time_ms:           parseInt(document.getElementById('f-irrigate').value) * 1000,
+        irrigation_cooldown_cycles: cooldown,
+        measure_period_ms:          measure * 1000,
+        irrigate_time_ms:           irrigate * 1000,
     };
 
     try {

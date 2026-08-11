@@ -567,3 +567,13 @@ footer {
 .btn-neutral:hover {
     background: #ffd7a8;
 }
+
+/* ─── Botón "Activar" (planta inactiva) ─────────────────────── */
+.btn-activar {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+.btn-activar:hover {
+    background: #bfdbfe;
+}

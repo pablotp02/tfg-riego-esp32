@@ -81,28 +81,44 @@
                 <input type="text" id="f-name" required>
 
                 <label>Umbral inicio riego (%)</label>
-                <input type="number" step="0.1" id="f-start" required>
+                <input type="number" step="0.1" min="0" max="100" id="f-start" required>
 
                 <label>Umbral parada riego (%)</label>
-                <input type="number" step="0.1" id="f-stop" required>
+                <input type="number" step="0.1" min="0" max="100" id="f-stop" required>
 
                 <label>Temperatura mínima suelo (ºC)</label>
                 <input type="number" step="0.1" id="f-mintemp" required>
 
                 <label>Cooldown de riego (ciclos)</label>
-                <input type="number" step="1" id="f-cooldown" required>
+                <input type="number" step="1" min="0" max="5" id="f-cooldown" required>
 
                 <label>Periodo de medida (s)</label>
-                <input type="number" step="1" id="f-measure" required>
+                <input type="number" step="1" min="1" id="f-measure" required>
 
                 <label>Duración de riego (s)</label>
-                <input type="number" step="1" id="f-irrigate" required>
+                <input type="number" step="1" min="1" id="f-irrigate" required>
 
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="modal-cancel">Cancelar</button>
                     <button type="submit" class="btn-primary">Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMACIÓN (reemplaza a confirm() nativo) -->
+    <div class="modal-overlay" id="confirm-modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>Confirmar</span>
+            </div>
+            <div class="info-modal-body">
+                <p id="confirm-modal-message"></p>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary btn-small" id="confirm-modal-cancel">Cancelar</button>
+                    <button type="button" class="btn-secondary btn-delete btn-small" id="confirm-modal-ok">Eliminar</button>
+                </div>
+            </div>
         </div>
     </div>
 
