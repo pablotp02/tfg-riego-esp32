@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List
 from database import get_db
 import models, schemas
@@ -55,7 +56,9 @@ def get_active_plant(db: Session = Depends(get_db)):
 @router.post("/", response_model=schemas.PlantOut)
 def create_plant(payload: schemas.PlantCreate, db: Session = Depends(get_db)):
     """Crea una nueva planta con su configuración de riego."""
-    existing = db.query(models.Plant).filter(models.Plant.name == payload.name).first()
+    existing = db.query(models.Plant)\
+                 .filter(func.lower(models.Plant.name) == payload.name.lower())\
+                 .first()
     if existing:
         raise HTTPException(status_code=400, detail="Ya existe una planta con ese nombre")
 
@@ -126,8 +129,11 @@ def update_plant(plant_id: int, payload: schemas.PlantCreate, db: Session = Depe
         raise HTTPException(status_code=404, detail="Planta no encontrada")
 
     # Si se cambia el nombre, comprobar que no choque con otra planta
-    if payload.name != plant.name:
-        existing = db.query(models.Plant).filter(models.Plant.name == payload.name).first()
+    # (comparación insensible a mayúsculas)
+    if payload.name.lower() != plant.name.lower():
+        existing = db.query(models.Plant)\
+                     .filter(func.lower(models.Plant.name) == payload.name.lower())\
+                     .first()
         if existing:
             raise HTTPException(status_code=400, detail="Ya existe una planta con ese nombre")
 

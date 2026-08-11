@@ -12,8 +12,9 @@ const infoModalOverlay = document.getElementById('info-modal-overlay');
 const infoModalMessage = document.getElementById('info-modal-message');
 const infoModalOk      = document.getElementById('info-modal-ok');
 
-function showInfoModal(message) {
+function showInfoModal(message, isError = false) {
     infoModalMessage.innerHTML = message;
+    document.getElementById('info-modal-title').textContent = isError ? 'Error' : 'Aviso';
     infoModalOverlay.classList.add('visible');
 }
 infoModalOk.addEventListener('click', () => infoModalOverlay.classList.remove('visible'));
@@ -171,10 +172,10 @@ async function activatePlant(id, wasAlreadyActive) {
                 : `<strong>${escapeHtml(plant.name)}</strong> es ahora la planta activa. El dispositivo aplicará esta configuración en su próxima sincronización.`;
             showInfoModal(message);
         } else {
-            showInfoModal('La activación se completó, pero no se pudo confirmar que la configuración quedara sincronizada. Vuelve a intentarlo.');
+            showInfoModal('La activación se completó, pero no se pudo confirmar que la configuración quedara sincronizada. Vuelve a intentarlo.', true);
         }
     } catch (err) {
-        showInfoModal('Error al activar la planta');
+        showInfoModal('Error al activar la planta', true);
     }
 }
 
@@ -192,7 +193,7 @@ async function deletePlant(id, name) {
             loadActivePlant();
             loadPlantsList();
         } catch (err) {
-            showInfoModal('Error al eliminar la planta');
+            showInfoModal('Error al eliminar la planta', true);
         }
     });
 }
@@ -205,7 +206,7 @@ async function editPlant(id) {
         if (!plant) return;
         openModal('edit', plant);
     } catch (err) {
-        showInfoModal('Error al cargar los datos de la planta');
+        showInfoModal('Error al cargar los datos de la planta', true);
     }
 }
 
@@ -265,29 +266,24 @@ plantForm.addEventListener('submit', async (e) => {
     const name = document.getElementById('f-name').value.trim();
     const nameRegex = /^[\p{L}\p{N} '_-]+$/u;
     if (!nameRegex.test(name)) {
-        showInfoModal('El nombre de la planta solo puede contener letras, números, espacios, guiones, guiones bajos y apóstrofos.');
+        showInfoModal('El nombre de la planta solo puede contener letras, números, espacios, guiones, guiones bajos y apóstrofos.', true);
         return;
     }
 
     if (start < 0 || start > 100 || stop < 0 || stop > 100) {
-        showInfoModal('Los umbrales de riego deben estar entre 0% y 100%.');
-        return;
-    }
-
-    if (start < 0 || start > 100 || stop < 0 || stop > 100) {
-        showInfoModal('Los umbrales de riego deben estar entre 0% y 100%.');
+        showInfoModal('Los umbrales de riego deben estar entre 0% y 100%.', true);
         return;
     }
     if (start >= stop) {
-        showInfoModal('El umbral de inicio de riego debe ser menor que el umbral de parada de riego.');
+        showInfoModal('El umbral de inicio de riego debe ser menor que el umbral de parada de riego.', true);
         return;
     }
     if (cooldown < 0 || cooldown > 5) {
-        showInfoModal('El cooldown debe estar entre 0 y 5 ciclos, ya que cada ciclo puede representar varias horas de espera entre riegos.');
+        showInfoModal('El cooldown debe estar entre 0 y 5 ciclos, ya que cada ciclo puede representar varias horas de espera entre riegos.', true);
         return;
     }
     if (measure < 1 || irrigate < 1) {
-        showInfoModal('El periodo de medida y la duración de riego deben ser de al menos 1 segundo.');
+        showInfoModal('El periodo de medida y la duración de riego deben ser de al menos 1 segundo.', true);
         return;
     }
 
@@ -302,19 +298,27 @@ plantForm.addEventListener('submit', async (e) => {
     };
 
     try {
+        let res;
         if (id) {
-            await fetch(`${API_URL}/api/plants/${id}`, {
+            res = await fetch(`${API_URL}/api/plants/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
         } else {
-            await fetch(`${API_URL}/api/plants/`, {
+            res = await fetch(`${API_URL}/api/plants/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
         }
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            showInfoModal(errorData.detail || 'Error al guardar la planta.', true);
+            return;
+        }
+
         closeModal();
         loadActivePlant();
         loadPlantsList();
@@ -326,7 +330,7 @@ plantForm.addEventListener('submit', async (e) => {
             showInfoModal('Cambios guardados.\n\nLa planta ha pasado a estado <strong>Pendiente</strong>, ya que estos cambios aún no están disponibles para el dispositivo. Pulsa <strong>Aplicar cambios</strong> en su tarjeta para dejarlos listos, y el dispositivo los recogerá en su próxima sincronización.');
         }
     } catch (err) {
-        showInfoModal('Error al guardar la planta');
+        showInfoModal('Error al guardar la planta. Comprueba tu conexión con el servidor.', true);
     }
 });
 
