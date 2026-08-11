@@ -129,3 +129,14 @@ def mark_alert_sent(alert_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(alert)
     return alert
+
+@router.patch("/{alert_id}/pending", response_model=schemas.AlertOut)
+def mark_alert_pending(alert_id: int, db: Session = Depends(get_db)):
+    """Revierte una alerta ya marcada como enviada, devolviéndola a pendiente."""
+    alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alerta no encontrada")
+    alert.sent = False
+    db.commit()
+    db.refresh(alert)
+    return alert

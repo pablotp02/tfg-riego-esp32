@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TFG Riego Automático - Alertas</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span>🌱 Menú</span>
+            <button class="sidebar-close" id="sidebar-close">✕</button>
+        </div>
+        <ul class="sidebar-links">
+            <li><a href="index.html">🏠 Dashboard</a></li>
+            <li><a href="plants.html">🌱 Plantas</a></li>
+            <li><a href="alerts.html" class="active">⚠️ Alertas</a></li>
+        </ul>
+    </nav>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-content">
+            <button class="menu-toggle" id="menu-toggle">☰</button>
+            <h1>⚠️ Gestión de alertas</h1>
+            <div class="status-badge" id="status-badge">Conectando...</div>
+        </div>
+    </header>
+
+    <main>
+
+        <section class="section-title">
+            <h2>Todas las alertas</h2>
+        </section>
+
+        <section class="alerts-section" id="alerts-container">
+            <p class="no-alerts">Cargando...</p>
+        </section>
+
+        <section style="text-align: center; margin-top: 20px;">
+            <button class="btn-secondary" id="btn-load-more">Cargar más</button>
+            <p class="no-alerts" id="no-more-alerts" style="display: none;">No hay más alertas</p>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>TFG Sistema de Riego Automático con ESP32 — Pablo</p>
+    </footer>
+
+    <!-- MODAL DE AVISO (reemplaza a alert() nativo) -->
+    <div class="modal-overlay" id="info-modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>Aviso</span>
+            </div>
+            <div class="info-modal-body">
+                <p id="info-modal-message"></p>
+                <div class="modal-actions">
+                    <button type="button" class="btn-primary" id="info-modal-ok">Entendido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/sidebar.js"></script>
+    <script src="js/alerts.js"></script>
+
+</body>
+</html>

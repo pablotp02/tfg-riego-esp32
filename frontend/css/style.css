@@ -557,3 +557,13 @@ footer {
     line-height: 1.6;
     white-space: pre-line;
 }
+
+/* ─── Botón "Marcar como pendiente" (revertir estado) ──────── */
+.btn-neutral {
+    background: #ffe4c4;
+    color: #9a5b1f;
+    border: 1px solid #ffcb8a;
+}
+.btn-neutral:hover {
+    background: #ffd7a8;
+}
