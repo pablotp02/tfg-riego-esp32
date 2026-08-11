@@ -157,9 +157,10 @@ class PlantCreate(BaseModel):
     irrigate_time_ms:          int
 
 class PlantOut(PlantCreate):
-    id:         int
-    is_active:  bool
-    created_at: datetime
+    id:             int
+    is_active:      bool
+    created_at:     datetime
+    config_synced:  Optional[bool] = None
 
     class Config:
         from_attributes = True

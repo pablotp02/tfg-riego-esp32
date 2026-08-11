@@ -29,7 +29,7 @@ const confirmModalCancel  = document.getElementById('confirm-modal-cancel');
 let confirmModalCallback = null;
 
 function showConfirmModal(message, onConfirm) {
-    confirmModalMessage.textContent = message;
+    confirmModalMessage.innerHTML = message;
     confirmModalCallback = onConfirm;
     confirmModalOverlay.classList.add('visible');
 }
@@ -91,10 +91,13 @@ async function loadActivePlant() {
     }
 }
 
+let allLoadedPlants = [];
+
 async function loadPlantsList() {
     try {
         const res = await fetch(`${API_URL}/api/plants/`);
         const plants = await res.json();
+        allLoadedPlants = plants;
         if (plants.length === 0) {
             listContainer.innerHTML = '<p class="no-alerts">No hay plantas guardadas</p>';
             return;
@@ -105,19 +108,33 @@ async function loadPlantsList() {
     }
 }
 
+// Escapa caracteres HTML especiales antes de insertar el nombre de una
+// planta dentro de un mensaje con innerHTML, evitando que un nombre con
+// caracteres como < o & rompa el renderizado del modal
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function renderPlantCard(plant) {
-    const badge = plant.is_active
-        ? '<span class="badge-si">Activa</span>'
-        : '<span class="badge-no">Inactiva</span>';
+    let badge;
+    if (!plant.is_active) {
+        badge = '<span class="badge-no">Inactiva</span>';
+    } else if (plant.config_synced) {
+        badge = '<span class="badge-si">Activa</span>';
+    } else {
+        badge = '<span class="badge-pendiente">Pendiente</span>';
+    }
 
     const activateBtn = plant.is_active
-        ? `<button class="btn-activate btn-small" onclick="activatePlant(${plant.id})">Aplicar cambios</button>`
-        : `<button class="btn-activar btn-small" onclick="activatePlant(${plant.id})">Activar</button>`;
+        ? `<button class="btn-activate btn-small" data-action="activate" data-id="${plant.id}" data-already-active="true">Aplicar cambios</button>`
+        : `<button class="btn-activar btn-small" data-action="activate" data-id="${plant.id}" data-already-active="false">Activar</button>`;
 
     return `
         <div class="plant-card ${plant.is_active ? 'is-active' : ''}">
             <div class="plant-card-top">
-                <span class="plant-card-name">${plant.name}</span>
+                <span class="plant-card-name">${escapeHtml(plant.name)}</span>
                 ${badge}
             </div>
             <div class="plant-card-params">
@@ -130,25 +147,46 @@ function renderPlantCard(plant) {
             </div>
             <div class="plant-card-actions">
                 ${activateBtn}
-                <button class="btn-edit btn-small" onclick="editPlant(${plant.id})">Editar</button>
-                <button class="btn-delete btn-small" onclick="deletePlant(${plant.id}, '${plant.name}')">Eliminar</button>
+                <button class="btn-edit btn-small" data-action="edit" data-id="${plant.id}">Editar</button>
+                <button class="btn-delete btn-small" data-action="delete" data-id="${plant.id}">Eliminar</button>
             </div>
         </div>
     `;
 }
 
-async function activatePlant(id) {
+async function activatePlant(id, wasAlreadyActive) {
     try {
-        await fetch(`${API_URL}/api/plants/${id}/activate`, { method: 'POST' });
+        const res = await fetch(`${API_URL}/api/plants/${id}/activate`, { method: 'POST' });
+        if (!res.ok) throw new Error('Fallo en la petición');
+        const plant = await res.json();
+
         loadActivePlant();
         loadPlantsList();
+
+        // Verificamos con el propio dato que devuelve el backend, en vez
+        // de asumir éxito solo porque la petición HTTP no dio error
+        if (plant.config_synced === true) {
+            const message = wasAlreadyActive
+                ? `Cambios aplicados correctamente. La configuración de <strong>${escapeHtml(plant.name)}</strong> ya está lista para ser recogida por el dispositivo.`
+                : `<strong>${escapeHtml(plant.name)}</strong> es ahora la planta activa. El dispositivo aplicará esta configuración en su próxima sincronización.`;
+            showInfoModal(message);
+        } else {
+            showInfoModal('La activación se completó, pero no se pudo confirmar que la configuración quedara sincronizada. Vuelve a intentarlo.');
+        }
     } catch (err) {
         showInfoModal('Error al activar la planta');
     }
 }
 
 async function deletePlant(id, name) {
-    showConfirmModal(`¿Eliminar la planta "${name}"?`, async () => {
+    const plant = allLoadedPlants.find(p => p.id === id);
+    const isActivePlant = plant ? plant.is_active : false;
+
+    const message = isActivePlant
+        ? `<strong>${escapeHtml(name)}</strong> es la planta activa. Si la eliminas, el dispositivo seguirá funcionando con la última configuración conocida hasta que actives otra planta. ¿Deseas continuar?`
+        : `¿Eliminar la planta <strong>${escapeHtml(name)}</strong>?`;
+
+    showConfirmModal(message, async () => {
         try {
             await fetch(`${API_URL}/api/plants/${id}`, { method: 'DELETE' });
             loadActivePlant();
@@ -224,6 +262,18 @@ plantForm.addEventListener('submit', async (e) => {
     const measure  = parseInt(document.getElementById('f-measure').value);
     const irrigate = parseInt(document.getElementById('f-irrigate').value);
 
+    const name = document.getElementById('f-name').value.trim();
+    const nameRegex = /^[\p{L}\p{N} '_-]+$/u;
+    if (!nameRegex.test(name)) {
+        showInfoModal('El nombre de la planta solo puede contener letras, números, espacios, guiones, guiones bajos y apóstrofos.');
+        return;
+    }
+
+    if (start < 0 || start > 100 || stop < 0 || stop > 100) {
+        showInfoModal('Los umbrales de riego deben estar entre 0% y 100%.');
+        return;
+    }
+
     if (start < 0 || start > 100 || stop < 0 || stop > 100) {
         showInfoModal('Los umbrales de riego deben estar entre 0% y 100%.');
         return;
@@ -242,7 +292,7 @@ plantForm.addEventListener('submit', async (e) => {
     }
 
     const payload = {
-        name: document.getElementById('f-name').value,
+        name: name,
         soil_start_irrigation_pct:  start,
         soil_stop_irrigation_pct:   stop,
         soil_min_temp_c:            parseFloat(document.getElementById('f-mintemp').value),
@@ -270,13 +320,35 @@ plantForm.addEventListener('submit', async (e) => {
         loadPlantsList();
 
         // Si se editó la planta activa, los cambios NO llegan solos al
-        // dispositivo (ver decisión de diseño: editar y activar son
-        // acciones independientes). Avisamos con un pop-up para que
+        // dispositivo. Avisamos con un pop-up para que
         // no pase desapercibido.
         if (wasEditingActivePlant) {
-            showInfoModal('Cambios guardados.\n\nEsta planta está activa. Pulsa <strong>Aplicar cambios</strong> en su tarjeta para enviar esta configuración al dispositivo.');
+            showInfoModal('Cambios guardados.\n\nLa planta ha pasado a estado <strong>Pendiente</strong>, ya que estos cambios aún no están disponibles para el dispositivo. Pulsa <strong>Aplicar cambios</strong> en su tarjeta para dejarlos listos, y el dispositivo los recogerá en su próxima sincronización.');
         }
     } catch (err) {
         showInfoModal('Error al guardar la planta');
+    }
+});
+
+// Listener delegado para los botones de acción de las tarjetas de planta.
+// En vez de usar onclick inline (frágil ante caracteres como comillas en
+// el nombre de la planta), usamos data-attributes y delegación de eventos.
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    const id = parseInt(btn.dataset.id);
+
+    if (action === 'activate') {
+        const wasAlreadyActive = btn.dataset.alreadyActive === 'true';
+        activatePlant(id, wasAlreadyActive);
+    } else if (action === 'edit') {
+        editPlant(id);
+    } else if (action === 'delete') {
+        // Buscamos el nombre real de la planta en los datos ya cargados,
+        // en vez de pasarlo por el HTML
+        const plant = allLoadedPlants.find(p => p.id === id);
+        deletePlant(id, plant ? plant.name : '');
     }
 });

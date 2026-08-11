@@ -577,3 +577,13 @@ footer {
 .btn-activar:hover {
     background: #bfdbfe;
 }
+
+/* ─── Badge "Pendiente" (config no sincronizada) ────────────── */
+.badge-pendiente {
+    background: #ffe4c4;
+    color: #9a5b1f;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}

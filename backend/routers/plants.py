@@ -6,11 +6,40 @@ import models, schemas
 
 router = APIRouter()
 
+def is_plant_synced(plant: models.Plant, db: Session) -> bool | None:
+    """
+    Compara los parámetros actuales de la planta con la última versión
+    de device_config, para determinar si el dispositivo ya tiene
+    aplicados estos valores. Solo tiene sentido para la planta activa;
+    para el resto devuelve None (no aplica).
+    """
+    if not plant.is_active:
+        return None
+
+    last_config = db.query(models.DeviceConfig)\
+                     .order_by(models.DeviceConfig.updated_at.desc())\
+                     .first()
+
+    if not last_config:
+        return False
+
+    return (
+        plant.soil_start_irrigation_pct == last_config.soil_start_irrigation_pct and
+        plant.soil_stop_irrigation_pct == last_config.soil_stop_irrigation_pct and
+        plant.soil_min_temp_c == last_config.soil_min_temp_c and
+        plant.irrigation_cooldown_cycles == last_config.irrigation_cooldown_cycles and
+        plant.measure_period_ms == last_config.measure_period_ms and
+        plant.irrigate_time_ms == last_config.irrigate_time_ms
+    )
+
 
 @router.get("/", response_model=List[schemas.PlantOut])
 def get_plants(db: Session = Depends(get_db)):
     """Devuelve todas las plantas guardadas."""
-    return db.query(models.Plant).order_by(models.Plant.name).all()
+    plants = db.query(models.Plant).order_by(models.Plant.name).all()
+    for plant in plants:
+        plant.config_synced = is_plant_synced(plant, db)
+    return plants
 
 
 @router.get("/active", response_model=schemas.PlantOut)
@@ -19,6 +48,7 @@ def get_active_plant(db: Session = Depends(get_db)):
     plant = db.query(models.Plant).filter(models.Plant.is_active == True).first()
     if not plant:
         raise HTTPException(status_code=404, detail="No hay ninguna planta activa")
+    plant.config_synced = is_plant_synced(plant, db)
     return plant
 
 
@@ -66,6 +96,7 @@ def activate_plant(plant_id: int, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(plant)
+    plant.config_synced = is_plant_synced(plant, db)
     return plant
 
 
@@ -76,9 +107,15 @@ def delete_plant(plant_id: int, db: Session = Depends(get_db)):
     if not plant:
         raise HTTPException(status_code=404, detail="Planta no encontrada")
 
+    was_active = plant.is_active
+
     db.delete(plant)
     db.commit()
-    return {"status": "ok", "message": f"Planta '{plant.name}' eliminada"}
+    return {
+        "status": "ok",
+        "message": f"Planta '{plant.name}' eliminada",
+        "was_active": was_active
+    }
 
 
 @router.put("/{plant_id}", response_model=schemas.PlantOut)
@@ -99,4 +136,5 @@ def update_plant(plant_id: int, payload: schemas.PlantCreate, db: Session = Depe
 
     db.commit()
     db.refresh(plant)
+    plant.config_synced = is_plant_synced(plant, db)
     return plant
