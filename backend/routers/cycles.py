@@ -7,12 +7,18 @@ import models, schemas
 import csv
 import io
 from fastapi.responses import StreamingResponse
+from routers.notifications import notify_alert
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+
+from datetime import timedelta
+
+SENSOR_ERROR_THRESHOLD = 5  # lecturas consecutivas inválidas para disparar alerta
+SENSOR_ERROR_ALERT_COOLDOWN_MINUTES = 15
 
 router = APIRouter()
 
@@ -34,6 +40,10 @@ def create_cycle(payload: schemas.CyclePayload, db: Session = Depends(get_db)):
     )
     db.add(sensor)
     db.flush()  # para obtener el id sin hacer commit todavía
+
+    # Comprobar patrón de errores repetidos de sensor tras guardar
+    # esta lectura (incluye la actual en el recuento)
+    check_repeated_sensor_error(db)
 
     # 2) Guardar error de sensor si lo hay
     if payload.sensor_error:
@@ -67,14 +77,22 @@ def create_cycle(payload: schemas.CyclePayload, db: Session = Depends(get_db)):
 
     # 5) Comprobar si hay que generar alerta de batería
     if payload.battery_pct <= 20.0:
+        alert_type = "BATTERY_CRITICAL" if payload.battery_pct <= 10.0 else "BATTERY_LOW"
+        alert_message = f"Nivel de batería: {payload.battery_pct}%"
+
         alert = models.Alert(
-            alert_type = "BATTERY_CRITICAL" if payload.battery_pct <= 10.0 else "BATTERY_LOW",
-            message    = f"Nivel de batería: {payload.battery_pct}%",
+            alert_type = alert_type,
+            message    = alert_message,
             sent       = False,
             channel    = "telegram",
             power_id   = power.id
         )
         db.add(alert)
+        db.flush()  # para poder actualizar alert.sent tras el envío
+
+        emoji = "🔴" if alert_type == "BATTERY_CRITICAL" else "🟠"
+        sent_ok = notify_alert(db, f"{emoji} {alert_type}\n{alert_message}")
+        alert.sent = sent_ok
 
     # 6) Guardar resumen del ciclo
     cycle = models.SystemCycle(
@@ -102,6 +120,49 @@ def get_cycles(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
 def power_mode_to_str(mode: int) -> str:
     return {0: "NORMAL", 1: "LOW", 2: "CRITICAL"}.get(mode, "DESCONOCIDO")
 
+def check_repeated_sensor_error(db: Session):
+    """
+    Comprueba si las últimas SENSOR_ERROR_THRESHOLD lecturas de sensor
+    son todas inválidas. Si es así, y no hay ya una alerta reciente del
+    mismo tipo, genera una nueva alerta SENSOR_ERROR_REPEATED.
+    """
+    recent_readings = db.query(models.SensorReading)\
+                         .order_by(models.SensorReading.recorded_at.desc())\
+                         .limit(SENSOR_ERROR_THRESHOLD)\
+                         .all()
+
+    if len(recent_readings) < SENSOR_ERROR_THRESHOLD:
+        # Todavía no hay histórico suficiente para evaluar el patrón
+        return
+
+    if not all(not r.validated for r in recent_readings):
+        # Al menos una de las últimas lecturas es válida, no hay problema
+        return
+
+    recent_alert = db.query(models.Alert)\
+                      .filter(models.Alert.alert_type == "SENSOR_ERROR_REPEATED")\
+                      .order_by(models.Alert.recorded_at.desc())\
+                      .first()
+
+    if recent_alert:
+        time_since_last_alert = datetime.utcnow() - recent_alert.recorded_at
+        if time_since_last_alert < timedelta(minutes=SENSOR_ERROR_ALERT_COOLDOWN_MINUTES):
+            return
+
+    alert_message = f"Las últimas {SENSOR_ERROR_THRESHOLD} lecturas del sensor no son válidas. Revisa la conexión física del sensor SEN0604."
+
+    new_alert = models.Alert(
+        alert_type="SENSOR_ERROR_REPEATED",
+        message=alert_message,
+        sent=False,
+        channel="telegram",
+        power_id=None
+    )
+    db.add(new_alert)
+    db.flush()
+
+    sent_ok = notify_alert(db, f"⚠️ SENSOR_ERROR_REPEATED\n{alert_message}")
+    new_alert.sent = sent_ok
 
 @router.get("/export/range")
 def get_export_date_range(db: Session = Depends(get_db)):

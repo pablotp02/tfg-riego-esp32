@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from typing import List
 from database import get_db
 import models, schemas
+from telegram_utils import send_telegram_message
+from routers.notifications import notify_alert
 
 router = APIRouter()
 
@@ -76,14 +78,21 @@ def check_device_disconnected(db: Session):
         if time_since_last_alert < timedelta(minutes=DISCONNECT_ALERT_COOLDOWN_MINUTES):
             return
 
+    alert_message = f"Sin comunicación con la ESP32 desde hace {state['seconds_since_last_cycle'] // 60} minutos"
+
     new_alert = models.Alert(
         alert_type="DEVICE_DISCONNECTED",
-        message=f"Sin comunicación con la ESP32 desde hace {state['seconds_since_last_cycle'] // 60} minutos",
+        message=alert_message,
         sent=False,
-        channel=None,
+        channel="telegram",
         power_id=None
     )
     db.add(new_alert)
+    db.flush()
+
+    sent_ok = notify_alert(db, f"🔌 DEVICE_DISCONNECTED\n{alert_message}")
+    new_alert.sent = sent_ok
+
     db.commit()
 
 

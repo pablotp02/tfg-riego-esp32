@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 
 # Importar routers
-from routers import cycles, sensors, irrigation, alerts, power, device_config, plants
+from routers import cycles, sensors, irrigation, alerts, power, device_config, plants, notifications
 
 # Crear tablas en la base de datos
 Base.metadata.create_all(bind=engine)
@@ -31,6 +31,7 @@ app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
 app.include_router(power.router, prefix="/api/power", tags=["power"])
 app.include_router(device_config.router, prefix="/api/config", tags=["config"])
 app.include_router(plants.router, prefix="/api/plants", tags=["plants"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 
 @app.get("/")
 def root():

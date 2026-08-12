@@ -145,3 +145,23 @@ class Plant(Base):
     irrigation_cooldown_cycles = Column(Integer, nullable=False)
     measure_period_ms         = Column(Integer, nullable=False)
     irrigate_time_ms          = Column(Integer, nullable=False)
+
+class NotificationRecipient(Base):
+    __tablename__ = "notification_recipients"
+
+    id      = Column(Integer, primary_key=True, index=True)
+    name    = Column(String(64), nullable=False)
+
+    telegram_chat_id = Column(String(64), nullable=True)
+    email             = Column(String(128), nullable=True)
+
+    enabled = Column(Boolean, nullable=False, default=True)
+
+
+class NotificationSettings(Base):
+    __tablename__ = "notification_settings"
+
+    id = Column(Integer, primary_key=True, default=1)
+
+    channel_telegram_enabled = Column(Boolean, nullable=False, default=True)
+    channel_email_enabled    = Column(Boolean, nullable=False, default=False)

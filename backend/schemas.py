@@ -164,3 +164,29 @@ class PlantOut(PlantCreate):
 
     class Config:
         from_attributes = True
+
+# ─── Notification Recipients ───────────────────────────────────────────────
+
+class NotificationRecipientCreate(BaseModel):
+    name: str
+    telegram_chat_id: Optional[str] = None
+    email: Optional[str] = None
+    enabled: bool = True
+
+class NotificationRecipientOut(NotificationRecipientCreate):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+# ─── Notification Settings ─────────────────────────────────────────────────
+
+class NotificationSettingsUpdate(BaseModel):
+    channel_telegram_enabled: bool
+    channel_email_enabled: bool
+
+class NotificationSettingsOut(NotificationSettingsUpdate):
+    id: int
+
+    class Config:
+        from_attributes = True
