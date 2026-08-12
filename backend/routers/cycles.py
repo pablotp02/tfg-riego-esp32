@@ -1,8 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime, date
 from database import get_db
 import models, schemas
+import csv
+import io
+from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
@@ -87,6 +91,95 @@ def get_cycles(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
     return db.query(models.SystemCycle)\
              .order_by(models.SystemCycle.recorded_at.desc())\
              .offset(skip).limit(limit).all()
+
+
+def power_mode_to_str(mode: int) -> str:
+    return {0: "NORMAL", 1: "LOW", 2: "CRITICAL"}.get(mode, "DESCONOCIDO")
+
+
+@router.get("/export/range")
+def get_export_date_range(db: Session = Depends(get_db)):
+    """
+    Devuelve la fecha del primer y último ciclo registrado, para que
+    el frontend pueda limitar el selector de fechas de exportación a
+    un rango que realmente contenga datos.
+    """
+    first_cycle = db.query(models.SystemCycle).order_by(models.SystemCycle.recorded_at.asc()).first()
+    last_cycle = db.query(models.SystemCycle).order_by(models.SystemCycle.recorded_at.desc()).first()
+
+    return {
+        "first_date": first_cycle.recorded_at.isoformat() if first_cycle else None,
+        "last_date": last_cycle.recorded_at.isoformat() if last_cycle else None,
+    }
+
+
+@router.get("/export/csv")
+def export_cycles_csv(
+    desde: Optional[date] = None,
+    hasta: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Exporta el histórico de ciclos en formato CSV, uniendo en cada
+    fila los datos de lectura de sensores, evento de riego y estado
+    energético asociados. Admite un rango de fechas opcional; si no
+    se especifica, exporta el histórico completo.
+    """
+    query = db.query(models.SystemCycle)
+
+    if desde:
+        query = query.filter(models.SystemCycle.recorded_at >= datetime.combine(desde, datetime.min.time()))
+    if hasta:
+        query = query.filter(models.SystemCycle.recorded_at <= datetime.combine(hasta, datetime.max.time()))
+
+    cycles = query.order_by(models.SystemCycle.recorded_at.asc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "cycle_number", "fecha",
+        "humedad_suelo_%", "temperatura_suelo_C", "ph", "ec_uS_cm", "lectura_valida",
+        "rego", "duracion_riego_ms", "motivo",
+        "cooldown_actual", "cooldown_requerido",
+        "bateria_%", "modo_energetico", "tiempo_sueno_ms", "causa_despertar"
+    ])
+
+    for cycle in cycles:
+        reading = cycle.reading
+        irrigation = cycle.irrigation
+        power = cycle.power
+
+        battery = None
+        if power:
+            battery = power.battery_pct_real if power.battery_pct_real is not None else power.battery_pct_simulated
+
+        writer.writerow([
+            cycle.cycle_number,
+            cycle.recorded_at.isoformat() if cycle.recorded_at else "",
+            reading.soil_moisture if reading else "",
+            reading.soil_temp if reading else "",
+            reading.ph if reading else "",
+            reading.ec if reading else "",
+            reading.validated if reading else "",
+            irrigation.irrigated if irrigation else "",
+            irrigation.duration_ms if irrigation else "",
+            irrigation.reason if irrigation else "",
+            cycle.cooldown_current,
+            cycle.cooldown_required,
+            battery,
+            power_mode_to_str(power.power_mode) if power else "",
+            power.sleep_ms if power else "",
+            power.wakeup_cause if power else "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=historial_riego.csv"}
+    )
+
 
 @router.get("/{cycle_id}", response_model=schemas.SystemCycleOut)
 def get_cycle(cycle_id: int, db: Session = Depends(get_db)):

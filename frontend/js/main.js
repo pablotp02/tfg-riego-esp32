@@ -235,3 +235,69 @@ async function refresh() {
 // Arrancar
 refresh();
 setInterval(refresh, REFRESH_INTERVAL);
+
+const exportModalOverlay = document.getElementById('export-modal-overlay');
+const exportDesdeInput   = document.getElementById('export-desde');
+const exportHastaInput   = document.getElementById('export-hasta');
+const exportForm         = document.getElementById('export-form');
+
+document.getElementById('btn-export-csv').addEventListener('click', async () => {
+    // Consultamos el rango disponible cada vez que se abre el modal,
+    // para que los límites de fecha reflejen siempre los datos reales
+    try {
+        const res = await fetch(`${API_URL}/api/cycles/export/range`);
+        const data = await res.json();
+
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (data.first_date) {
+            const minDate = data.first_date.split('T')[0];
+            exportDesdeInput.min = minDate;
+            exportHastaInput.min = minDate;
+        }
+        // La fecha "hasta" nunca puede ser futura respecto a hoy
+        exportDesdeInput.max = todayStr;
+        exportHastaInput.max = todayStr;
+
+        exportDesdeInput.value = '';
+        exportHastaInput.value = '';
+    } catch (err) {
+        // Si falla la consulta del rango, dejamos los campos sin
+        // restricciones adicionales; el backend seguirá validando
+        // igualmente que "hasta" no sea futura si se introduce a mano
+    }
+
+    exportModalOverlay.classList.add('visible');
+});
+
+document.getElementById('export-modal-close').addEventListener('click', () => {
+    exportModalOverlay.classList.remove('visible');
+});
+document.getElementById('export-modal-cancel').addEventListener('click', () => {
+    exportModalOverlay.classList.remove('visible');
+});
+exportModalOverlay.addEventListener('click', (e) => {
+    if (e.target === exportModalOverlay) exportModalOverlay.classList.remove('visible');
+});
+
+exportForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const desde = exportDesdeInput.value;
+    const hasta = exportHastaInput.value;
+
+    if (desde && hasta && desde > hasta) {
+        alert('La fecha "Desde" no puede ser posterior a la fecha "Hasta".');
+        return;
+    }
+
+    const params = new URLSearchParams();
+    if (desde) params.append('desde', desde);
+    if (hasta) params.append('hasta', hasta);
+
+    const queryString = params.toString();
+    const url = `${API_URL}/api/cycles/export/csv${queryString ? '?' + queryString : ''}`;
+
+    window.location.href = url;
+    exportModalOverlay.classList.remove('visible');
+});

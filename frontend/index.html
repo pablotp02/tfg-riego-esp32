@@ -107,6 +107,7 @@
         <!-- HISTORIAL DE RIEGOS -->
         <section class="section-title">
             <h2>Historial de riegos</h2>
+            <button class="btn-export btn-small" id="btn-export-csv"><span style="font-size: 1.1rem; vertical-align: middle;">⬇</span> Exportar CSV</button>
         </section>
 
         <section class="table-section">
@@ -139,6 +140,33 @@
     <footer>
         <p>TFG Sistema de Riego Automático con ESP32 — Pablo Tovar</p>
     </footer>
+
+    <!-- MODAL: EXPORTAR CSV -->
+    <div class="modal-overlay" id="export-modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>Exportar histórico</span>
+                <button class="sidebar-close" id="export-modal-close">✕</button>
+            </div>
+
+            <form id="export-form" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 4px;">
+                <p style="font-size: 0.85rem; color: #718096; margin-bottom: 8px;">
+                    Deja los campos vacíos para exportar el histórico completo.
+                </p>
+
+                <label style="font-size: 0.8rem; color: #718096; margin-top: 10px;">Desde</label>
+                <input type="date" id="export-desde" style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+
+                <label style="font-size: 0.8rem; color: #718096; margin-top: 10px;">Hasta</label>
+                <input type="date" id="export-hasta" style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="export-modal-cancel">Cancelar</button>
+                    <button type="submit" class="btn-primary">Exportar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script src="js/sidebar.js"></script>
     <script src="js/toast.js"></script>

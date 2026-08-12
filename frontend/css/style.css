@@ -822,3 +822,14 @@ footer {
     from { opacity: 1; transform: translateY(0); }
     to   { opacity: 0; transform: translateY(20px); }
 }
+
+/* ─── Botón "Exportar CSV" ──────────────────────────────────── */
+.btn-export {
+    background: #3b82f6;
+    color: white;
+    border: 1px solid #2563eb;
+    font-weight: 700;
+}
+.btn-export:hover {
+    background: #2563eb;
+}
