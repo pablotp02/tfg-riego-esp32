@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TFG Riego Automático - Alertas</title>
+    <title>TFG Riego Automático - Historial de configuración</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -17,8 +17,8 @@
         <ul class="sidebar-links">
             <li><a href="index.html">🏠 Dashboard</a></li>
             <li><a href="plants.html">🌱 Plantas</a></li>
-            <li><a href="alerts.html" class="active">⚠️ Alertas</a></li>
-            <li><a href="config-history.html">🕓 Historial de config.</a></li>
+            <li><a href="alerts.html">⚠️ Alertas</a></li>
+            <li><a href="config-history.html" class="active">🕓 Historial de config.</a></li>
         </ul>
     </nav>
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -27,7 +27,7 @@
     <header>
         <div class="header-content">
             <button class="menu-toggle" id="menu-toggle">☰</button>
-            <h1>⚠️ Gestión de alertas</h1>
+            <h1>🕓 Historial de configuración</h1>
             <div class="status-badge" id="status-badge">Conectando...</div>
         </div>
     </header>
@@ -35,16 +35,31 @@
     <main>
 
         <section class="section-title">
-            <h2>Todas las alertas</h2>
+            <h2>Versiones de configuración aplicadas</h2>
         </section>
 
-        <section class="alerts-section" id="alerts-container">
-            <p class="no-alerts">Cargando...</p>
+        <section class="table-section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Inicio riego</th>
+                        <th>Parada riego</th>
+                        <th>Temp. mínima</th>
+                        <th>Cooldown</th>
+                        <th>Periodo medida</th>
+                        <th>Duración riego</th>
+                    </tr>
+                </thead>
+                <tbody id="config-history-table">
+                    <tr><td colspan="7">Cargando...</td></tr>
+                </tbody>
+            </table>
         </section>
 
         <section style="text-align: center; margin-top: 20px;">
             <button class="btn-secondary" id="btn-load-more">Cargar más</button>
-            <p class="no-alerts" id="no-more-alerts" style="display: none;">No hay más alertas</p>
+            <p class="no-alerts" id="no-more-history" style="display: none;">No hay más versiones de configuración registradas</p>
         </section>
 
     </main>
@@ -53,23 +68,8 @@
         <p>TFG Sistema de Riego Automático con ESP32 — Pablo</p>
     </footer>
 
-    <!-- MODAL DE AVISO (reemplaza a alert() nativo) -->
-    <div class="modal-overlay" id="info-modal-overlay">
-        <div class="modal-box">
-            <div class="modal-header">
-                <span>Aviso</span>
-            </div>
-            <div class="info-modal-body">
-                <p id="info-modal-message"></p>
-                <div class="modal-actions">
-                    <button type="button" class="btn-primary" id="info-modal-ok">Entendido</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="js/sidebar.js"></script>
-    <script src="js/alerts.js"></script>
+    <script src="js/config-history.js"></script>
 
 </body>
 </html>
