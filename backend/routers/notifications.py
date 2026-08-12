@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from telegram_utils import send_telegram_message
+from email_utils import send_email
 from typing import List
 from database import get_db
 import models, schemas
@@ -23,7 +24,7 @@ def get_or_create_settings(db: Session) -> models.NotificationSettings:
         db.refresh(settings)
     return settings
 
-def notify_alert(db: Session, message: str) -> bool:
+def notify_alert(db: Session, message: str, subject: str = "Alerta - Sistema de Riego Automático") -> bool:
     """
     Envía una notificación a todos los destinatarios activos, según
     los canales habilitados en los ajustes globales. Centraliza la
@@ -31,8 +32,8 @@ def notify_alert(db: Session, message: str) -> bool:
     una alerta (batería baja, desconexión, error de sensor, etc.).
 
     Devuelve True si el mensaje se envió correctamente a al menos un
-    destinatario; False si no había ningún destinatario disponible o
-    todos los envíos fallaron.
+    destinatario, por cualquiera de los canales; False si no había
+    ningún destinatario disponible o todos los envíos fallaron.
     """
     settings = get_or_create_settings(db)
 
@@ -50,8 +51,17 @@ def notify_alert(db: Session, message: str) -> bool:
             if success:
                 any_success = True
 
-    # El canal de email se integrará más adelante, cuando se aborde
-    # esa parte de la funcionalidad (ver settings.channel_email_enabled)
+    if settings.channel_email_enabled:
+        email_recipients = db.query(models.NotificationRecipient)\
+            .filter(
+                models.NotificationRecipient.enabled == True,
+                models.NotificationRecipient.email.isnot(None)
+            ).all()
+
+        for recipient in email_recipients:
+            success = send_email(subject=subject, body=message, to_address=recipient.email)
+            if success:
+                any_success = True
 
     return any_success
 
