@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TFG Riego Automático - Plantas</title>
+    <title>TFG Riego Automático - Notificaciones</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -16,10 +16,10 @@
         </div>
         <ul class="sidebar-links">
             <li><a href="index.html">🏠 Dashboard</a></li>
-            <li><a href="plants.html" class="active">🌱 Mis plantas</a></li>
+            <li><a href="plants.html">🌱 Mis plantas</a></li>
             <li><a href="alerts.html">⚠️ Alertas</a></li>
             <li><a href="config-history.html">🕓 Historial de config.</a></li>
-            <li><a href="notifications.html">🔔 Notificaciones</a></li>
+            <li><a href="notifications.html" class="active">🔔 Notificaciones</a></li>
         </ul>
     </nav>
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -28,82 +28,61 @@
     <header>
         <div class="header-content">
             <button class="menu-toggle" id="menu-toggle">☰</button>
-            <h1>🌱 Gestión de plantas</h1>
+            <h1>🔔 Notificaciones</h1>
             <div class="status-badge" id="status-badge">Conectando...</div>
         </div>
     </header>
 
     <main>
 
+        <!-- AJUSTES GLOBALES -->
         <section class="section-title">
-            <h2>Plantas</h2>
-            <button class="btn-primary" id="btn-new-plant">+ Añadir planta</button>
+            <h2>Canales de notificación</h2>
         </section>
 
-        <section class="plants-grid">
-
-            <div class="plants-col">
-                <h3 class="plants-col-title">Planta activa</h3>
-                <div id="active-plant-container">
-                    <p class="no-alerts">Cargando...</p>
-                </div>
-
-                <h3 class="plants-col-title" style="margin-top: 24px;">Sincronización con el dispositivo</h3>
-                <div id="sync-status-container">
-                    <p class="no-alerts">Cargando...</p>
-                </div>
-            </div>
-
-            <div class="plants-col">
-                <h3 class="plants-col-title">Plantas guardadas</h3>
-                <div id="plants-list-container">
-                    <p class="no-alerts">Cargando...</p>
-                </div>
-            </div>
-
+        <section id="settings-container">
+            <p class="no-alerts">Cargando...</p>
         </section>
 
-        </main>
+        <!-- DESTINATARIOS -->
+        <section class="section-title">
+            <h2>Destinatarios</h2>
+            <button class="btn-primary" id="btn-new-recipient">+ Añadir destinatario</button>
+        </section>
+
+        <section id="recipients-container">
+            <p class="no-alerts">Cargando...</p>
+        </section>
+
+    </main>
 
     <footer>
         <p>TFG Sistema de Riego Automático con ESP32 — Pablo Tovar</p>
     </footer>
 
-    <!-- MODAL: CREAR / EDITAR PLANTA -->
+    <!-- MODAL: CREAR / EDITAR DESTINATARIO -->
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal-box">
             <div class="modal-header">
-                <span id="modal-title">Nueva planta</span>
+                <span id="modal-title">Nuevo destinatario</span>
                 <button class="sidebar-close" id="modal-close">✕</button>
             </div>
 
-            <div id="modal-warning" class="modal-warning hidden">
-                Esta planta está activa. Tras guardar, pulsa <strong>"Aplicar cambios"</strong> en su tarjeta para enviarlos al dispositivo.
-            </div>
+            <form id="recipient-form" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 4px;">
+                <input type="hidden" id="recipient-id">
 
-            <form id="plant-form">
-                <input type="hidden" id="plant-id">
+                <label style="font-size: 0.8rem; color: #718096; margin-top: 10px;">Nombre</label>
+                <input type="text" id="f-name" required style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
 
-                <label>Nombre</label>
-                <input type="text" id="f-name" required>
+                <label style="font-size: 0.8rem; color: #718096; margin-top: 10px;">Chat ID de Telegram (opcional)</label>
+                <input type="text" id="f-chat-id" style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
 
-                <label>Umbral inicio riego (%)</label>
-                <input type="number" step="0.1" min="0" max="100" id="f-start" required>
+                <label style="font-size: 0.8rem; color: #718096; margin-top: 10px;">Email (opcional)</label>
+                <input type="email" id="f-email" style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
 
-                <label>Umbral parada riego (%)</label>
-                <input type="number" step="0.1" min="0" max="100" id="f-stop" required>
-
-                <label>Temperatura mínima suelo (ºC)</label>
-                <input type="number" step="0.1" id="f-mintemp" required>
-
-                <label>Cooldown de riego (ciclos)</label>
-                <input type="number" step="1" min="0" max="5" id="f-cooldown" required>
-
-                <label>Periodo de medida (s)</label>
-                <input type="number" step="1" min="1" id="f-measure" required>
-
-                <label>Duración de riego (s)</label>
-                <input type="number" step="1" min="1" id="f-irrigate" required>
+                <p style="font-size: 0.78rem; color: #a0aec0; margin-top: 10px;">
+                    Debe indicarse al menos un canal de contacto.
+                </p>
 
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="modal-cancel">Cancelar</button>
@@ -113,7 +92,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE CONFIRMACIÓN (reemplaza a confirm() nativo) -->
+    <!-- MODAL DE CONFIRMACIÓN -->
     <div class="modal-overlay" id="confirm-modal-overlay">
         <div class="modal-box">
             <div class="modal-header">
@@ -123,13 +102,13 @@
                 <p id="confirm-modal-message"></p>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary btn-small" id="confirm-modal-cancel">Cancelar</button>
-                    <button type="button" class="btn-secondary btn-delete btn-small" id="confirm-modal-ok">Eliminar</button>
+                    <button type="button" class="btn-primary btn-small" id="confirm-modal-ok">Confirmar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DE AVISO (reemplaza a alert() nativo) -->
+    <!-- MODAL DE AVISO -->
     <div class="modal-overlay" id="info-modal-overlay">
         <div class="modal-box">
             <div class="modal-header">
@@ -146,7 +125,7 @@
 
     <script src="js/sidebar.js"></script>
     <script src="js/toast.js"></script>
-    <script src="js/plants.js"></script>
+    <script src="js/notifications.js"></script>
 
 </body>
 </html>

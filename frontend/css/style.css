@@ -833,3 +833,114 @@ footer {
 .btn-export:hover {
     background: #2563eb;
 }
+
+/* ─── Toggle switch (interruptor deslizante) ────────────────── */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 26px;
+    flex-shrink: 0;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #e2e8f0;
+    border-radius: 26px;
+    transition: background-color 0.2s;
+}
+.toggle-slider::before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #40916c;
+}
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+}
+
+/* ─── Ajustes globales de notificación ──────────────────────── */
+.settings-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.settings-row-label {
+    font-size: 0.95rem;
+    color: #2d3748;
+    font-weight: 500;
+}
+.settings-row-desc {
+    font-size: 0.8rem;
+    color: #718096;
+    margin-top: 2px;
+}
+
+/* ─── Tarjeta de destinatario ────────────────────────────────── */
+.recipient-card {
+    background: white;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 14px;
+}
+.recipient-card.is-disabled {
+    opacity: 0.6;
+}
+.recipient-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.recipient-card-name {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #2d3748;
+}
+.recipient-card-channels {
+    font-size: 0.85rem;
+    color: #718096;
+    line-height: 1.6;
+}
+.recipient-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+.channel-tag {
+    display: inline-block;
+    background: #e6f0ff;
+    color: #1a56b3;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    margin-right: 6px;
+}
