@@ -245,6 +245,13 @@ tbody tr:hover {
     align-items: center;
 }
 
+.alert-item-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
 .alert-item.critical {
     border-left-color: #e63946;
 }
@@ -614,4 +621,138 @@ footer {
     color: #718096;
     font-weight: 600;
     margin-right: 6px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — Tablet (hasta 768px)
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+    /* Header: el título deja de crecer sin límite y se puede partir */
+    .header-content {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    header h1 {
+        font-size: 1.3rem;
+        flex: 1;
+    }
+
+    main {
+        padding: 20px 16px;
+    }
+
+    /* Tarjetas de estado: mínimo más pequeño para que quepan 2-3 por fila */
+    .cards-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+    .card {
+        padding: 14px;
+    }
+    .card-value {
+        font-size: 1.5rem;
+    }
+
+    /* Gráficas: una sola columna en vez de forzar 500px mínimo */
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Plantas: una columna en vez de dos, para que no queden apretadas */
+    .plants-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    /* Botones de acción de las tarjetas: permitir que se envuelvan en 2 líneas */
+    .plant-card-actions {
+        flex-wrap: wrap;
+    }
+
+    /* Tablas: aseguramos un ancho mínimo para forzar el scroll horizontal
+       de forma predecible, en vez de dejar que las columnas se aprieten */
+    .table-section table {
+        min-width: 600px;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — Móvil (hasta 480px)
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+
+    header {
+        padding: 14px 16px;
+    }
+    header h1 {
+        font-size: 1.1rem;
+    }
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+    }
+
+    main {
+        padding: 16px 12px;
+    }
+
+    .section-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    /* Tarjetas de estado: 2 columnas fijas, para que las 6 tarjetas
+       queden repartidas en 3 filas completas sin huecos */
+    .cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .card-icon {
+        font-size: 1.5rem;
+    }
+    .card-value {
+        font-size: 1.3rem;
+    }
+    .card-label {
+        font-size: 0.68rem;
+    }
+
+    /* Formularios: los botones de acción del modal a ancho completo */
+    .modal-actions {
+        flex-direction: column-reverse;
+    }
+    .modal-actions button {
+        width: 100%;
+    }
+
+    /* Tarjetas de planta: los botones de acción a ancho completo,
+       más fáciles de pulsar con el dedo */
+    .plant-card-actions {
+        flex-direction: column;
+    }
+    .plant-card-actions button {
+        width: 100%;
+    }
+
+    /* La tarjeta de sincronización también se apila en móvil */
+    .sync-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* Alertas: apilar verticalmente en vez de comprimir en fila */
+    .alert-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .alert-item-right {
+        align-items: stretch;
+        width: 100%;
+    }
+    .alert-item-right button {
+        width: 100%;
+    }
 }

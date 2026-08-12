@@ -68,7 +68,7 @@ function renderAlerts() {
                 </div>
                 <div class="alert-message">${alert.message || ''}</div>
             </div>
-            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+            <div class="alert-item-right">
                 <div class="alert-date">${formatDate(alert.recorded_at)}</div>
                 ${alert.sent
                     ? `<button class="btn-neutral btn-small" onclick="markAsPending(${alert.id})">Marcar como pendiente</button>`
