@@ -13,8 +13,9 @@ const infoModalOk      = document.getElementById('info-modal-ok');
 let currentSkip = 0;
 let allAlerts = []; // acumulamos lo cargado para no perderlo al marcar como enviada
 
-function showInfoModal(message) {
+function showInfoModal(message, isError = false) {
     infoModalMessage.textContent = message;
+    document.getElementById('info-modal-title').textContent = isError ? 'Error' : 'Aviso';
     infoModalOverlay.classList.add('visible');
 }
 infoModalOk.addEventListener('click', () => infoModalOverlay.classList.remove('visible'));
@@ -107,8 +108,9 @@ async function markAsSent(id) {
         const alert = allAlerts.find(a => a.id === id);
         if (alert) alert.sent = true;
         renderAlerts();
+        showToast('Alerta marcada como enviada', 'success');
     } catch (err) {
-        showInfoModal('Error al marcar la alerta como enviada');
+        showInfoModal('Error al marcar la alerta como enviada', true);
     }
 }
 
@@ -118,8 +120,9 @@ async function markAsPending(id) {
         const alert = allAlerts.find(a => a.id === id);
         if (alert) alert.sent = false;
         renderAlerts();
+        showToast('Alerta marcada como pendiente', 'warning');
     } catch (err) {
-        showInfoModal('Error al marcar la alerta como pendiente');
+        showInfoModal('Error al marcar la alerta como pendiente', true);
     }
 }
 

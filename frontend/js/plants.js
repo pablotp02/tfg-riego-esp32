@@ -255,6 +255,7 @@ async function deletePlant(id, name) {
             await fetch(`${API_URL}/api/plants/${id}`, { method: 'DELETE' });
             loadActivePlant();
             loadPlantsList();
+            showToast(`Planta <strong>${escapeHtml(name)}</strong> eliminada correctamente`, 'success');
         } catch (err) {
             showInfoModal('Error al eliminar la planta', true);
         }
@@ -386,11 +387,17 @@ plantForm.addEventListener('submit', async (e) => {
         loadActivePlant();
         loadPlantsList();
 
-        // Si se editó la planta activa, los cambios NO llegan solos al
-        // dispositivo. Avisamos con un pop-up para que
-        // no pase desapercibido.
         if (wasEditingActivePlant) {
+            // Si se editó la planta activa, los cambios NO llegan solos al
+            // dispositivo. Avisamos con un modal para que no pase
+            // desapercibido, ya que es información importante.
             showInfoModal('Cambios guardados.\n\nLa planta ha pasado a estado <strong>Pendiente</strong>, ya que estos cambios aún no están disponibles para el dispositivo. Pulsa <strong>Aplicar cambios</strong> en su tarjeta para dejarlos listos, y el dispositivo los recogerá en su próxima sincronización.');
+        } else if (id) {
+            // Edición de una planta que no era la activa: confirmación simple
+            showToast(`Planta <strong>${escapeHtml(name)}</strong> actualizada correctamente`, 'success');
+        } else {
+            // Creación de una planta nueva
+            showToast(`Planta <strong>${escapeHtml(name)}</strong> creada correctamente`, 'success');
         }
     } catch (err) {
         showInfoModal('Error al guardar la planta. Comprueba tu conexión con el servidor.', true);
