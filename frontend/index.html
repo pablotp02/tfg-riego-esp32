@@ -107,7 +107,7 @@
         <!-- HISTORIAL DE RIEGOS -->
         <section class="section-title">
             <h2>Historial de riegos</h2>
-            <button class="btn-export btn-small" id="btn-export-csv"><span style="font-size: 1.1rem; vertical-align: middle;">⬇</span> Exportar CSV</button>
+            <button class="btn-export btn-small" id="btn-export-csv"><span style="font-size: 1.1rem; vertical-align: middle;">⬇</span> Exportar datos</button>
         </section>
 
         <section class="table-section">
@@ -151,7 +151,7 @@
 
             <form id="export-form" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 4px;">
                 <p style="font-size: 0.85rem; color: #718096; margin-bottom: 8px;">
-                    Deja los campos vacíos para exportar el histórico completo.
+                    Deja los campos de fecha vacíos para exportar el histórico completo.
                 </p>
 
                 <label style="font-size: 0.8rem; color: #718096; margin-top: 10px;">Desde</label>
@@ -159,6 +159,18 @@
 
                 <label style="font-size: 0.8rem; color: #718096; margin-top: 10px;">Hasta</label>
                 <input type="date" id="export-hasta" style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+
+                <label style="font-size: 0.8rem; color: #718096; margin-top: 14px;">Formato</label>
+                <div style="display: flex; gap: 16px; margin-top: 4px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.9rem; font-weight: normal; margin-top: 0;">
+                        <input type="radio" name="export-format" value="csv" checked>
+                        CSV (analizar datos)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.9rem; font-weight: normal; margin-top: 0;">
+                        <input type="radio" name="export-format" value="pdf">
+                        PDF (informe)
+                    </label>
+                </div>
 
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="export-modal-cancel">Cancelar</button>

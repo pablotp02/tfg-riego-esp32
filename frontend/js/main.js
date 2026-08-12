@@ -291,12 +291,14 @@ exportForm.addEventListener('submit', (e) => {
         return;
     }
 
+    const format = document.querySelector('input[name="export-format"]:checked').value;
+
     const params = new URLSearchParams();
     if (desde) params.append('desde', desde);
     if (hasta) params.append('hasta', hasta);
 
     const queryString = params.toString();
-    const url = `${API_URL}/api/cycles/export/csv${queryString ? '?' + queryString : ''}`;
+    const url = `${API_URL}/api/cycles/export/${format}${queryString ? '?' + queryString : ''}`;
 
     window.location.href = url;
     exportModalOverlay.classList.remove('visible');
