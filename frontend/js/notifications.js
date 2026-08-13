@@ -279,6 +279,27 @@ recipientForm.addEventListener('submit', async (e) => {
         return;
     }
 
+    // Validación de formato del chat_id de Telegram: los identificadores
+    // de conversaciones privadas son siempre números enteros positivos,
+    // sin una longitud fija de dígitos garantizada por Telegram
+    if (chatId && !/^\d+$/.test(chatId)) {
+        showInfoModal('El chat ID de Telegram solo puede contener números positivos.', true);
+        return;
+    }
+
+    // Validación de formato del email
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+        showInfoModal('Introduce una dirección de correo válida.', true);
+        return;
+    }
+
+    // Comprobación de caracteres que podrían causar problemas de
+    // renderizado o inyección si se insertaran sin escapar
+    if (/['"<>]/.test(name) || /['"<>]/.test(chatId) || /['"<>]/.test(email)) {
+        showInfoModal('Los campos no deben contener comillas ni los símbolos < >.', true);
+        return;
+    }
+
     const payload = {
         name: name,
         telegram_chat_id: chatId || null,
