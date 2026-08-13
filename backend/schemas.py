@@ -30,6 +30,7 @@ class IrrigationEventCreate(BaseModel):
 class IrrigationEventOut(IrrigationEventCreate):
     id:          int
     recorded_at: datetime
+    battery_pct: Optional[float] = None
 
     class Config:
         from_attributes = True

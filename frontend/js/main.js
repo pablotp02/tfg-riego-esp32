@@ -175,7 +175,7 @@ async function updateIrrigationTable() {
         const tbody = document.getElementById('irrigation-table');
 
         if (!data.length) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#718096">Sin eventos de riego</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#718096">Sin eventos de riego</td></tr>';
             return;
         }
 
@@ -185,6 +185,7 @@ async function updateIrrigationTable() {
                 <td><span class="badge-${event.irrigated ? 'si' : 'no'}">${event.irrigated ? 'Sí' : 'No'}</span></td>
                 <td>${event.duration_ms ? (event.duration_ms / 1000).toFixed(1) + ' s' : '--'}</td>
                 <td>${event.reason || '--'}</td>
+                <td>${event.battery_pct !== null && event.battery_pct !== undefined ? event.battery_pct.toFixed(1) + '%' : '--'}</td>
             </tr>
         `).join('');
     } catch (e) {
