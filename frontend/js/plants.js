@@ -206,7 +206,7 @@ function renderPlantCard(plant) {
                 Temp. mínima: ${plant.soil_min_temp_c}ºC &middot;
                 Riesgo congelación: ${plant.soil_freeze_risk_temp_c}ºC<br>
                 Cooldown: ${plant.irrigation_cooldown_cycles} ciclos<br>
-                Medida: ${plant.measure_period_ms / 1000}s &middot;
+                Intervalo medida: ${plant.measure_period_ms / 1000}s &middot;
                 Riego: ${plant.irrigate_time_ms / 1000}s
             </div>
             <div class="plant-card-actions">
@@ -355,7 +355,7 @@ plantForm.addEventListener('submit', async (e) => {
         return;
     }
     if (measure < 1 || irrigate < 1) {
-        showInfoModal('El periodo de medida y la duración de riego deben ser de al menos 1 segundo.', true);
+        showInfoModal('El intervalo entre mediciones y la duración de riego deben ser de al menos 1 segundo.', true);
         return;
     }
 
