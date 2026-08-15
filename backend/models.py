@@ -105,7 +105,7 @@ class Alert(Base):
     sent       = Column(Boolean, nullable=False, default=False)
     channel    = Column(String(16))
 
-    power_id = Column(Integer, ForeignKey("power_states.id"))
+    power_id = Column(Integer, ForeignKey("power_states.id"), unique=True)
 
     # Relaciones
     power = relationship("PowerState", back_populates="alerts")
