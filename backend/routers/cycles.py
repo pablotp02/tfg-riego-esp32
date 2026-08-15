@@ -45,6 +45,10 @@ def create_cycle(payload: schemas.CyclePayload, db: Session = Depends(get_db)):
     # esta lectura (incluye la actual en el recuento)
     check_repeated_sensor_error(db)
 
+    # Comprobar si la temperatura del suelo requiere generar alguna
+    # alerta (frío perjudicial para la planta, o riesgo de congelación)
+    check_soil_temperature_alerts(db, payload.soil_temp)
+
     # 2) Guardar error de sensor si lo hay
     if payload.sensor_error:
         error = models.SystemError(
@@ -163,6 +167,50 @@ def check_repeated_sensor_error(db: Session):
 
     sent_ok = notify_alert(db, f"⚠️ SENSOR_ERROR_REPEATED\n{alert_message}")
     new_alert.sent = sent_ok
+
+def check_soil_temperature_alerts(db: Session, soil_temp: float | None):
+    """
+    Comprueba si la temperatura del suelo del ciclo actual está por
+    debajo del umbral mínimo de riego o del umbral de riesgo de
+    congelación, generando la alerta correspondiente en cada caso.
+    """
+    if soil_temp is None:
+        return
+
+    last_config = db.query(models.DeviceConfig)\
+                     .order_by(models.DeviceConfig.updated_at.desc())\
+                     .first()
+
+    if not last_config:
+        return
+
+    if soil_temp < last_config.soil_min_temp_c:
+        alert_message = f"Temperatura del suelo: {soil_temp}°C. El riego se pausa para no perjudicar a la planta."
+        alert = models.Alert(
+            alert_type="SOIL_TEMP_LOW",
+            message=alert_message,
+            sent=False,
+            channel="telegram",
+            power_id=None
+        )
+        db.add(alert)
+        db.flush()
+        sent_ok = notify_alert(db, f"🥶 SOIL_TEMP_LOW\n{alert_message}")
+        alert.sent = sent_ok
+
+    if soil_temp < last_config.soil_freeze_risk_temp_c:
+        alert_message = f"Temperatura del suelo: {soil_temp}°C. Riesgo de congelación del agua en el sistema."
+        alert = models.Alert(
+            alert_type="SOIL_FREEZE_RISK",
+            message=alert_message,
+            sent=False,
+            channel="telegram",
+            power_id=None
+        )
+        db.add(alert)
+        db.flush()
+        sent_ok = notify_alert(db, f"❄️ SOIL_FREEZE_RISK\n{alert_message}")
+        alert.sent = sent_ok
 
 @router.get("/export/range")
 def get_export_date_range(db: Session = Depends(get_db)):

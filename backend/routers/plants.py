@@ -28,6 +28,7 @@ def is_plant_synced(plant: models.Plant, db: Session) -> bool | None:
         plant.soil_start_irrigation_pct == last_config.soil_start_irrigation_pct and
         plant.soil_stop_irrigation_pct == last_config.soil_stop_irrigation_pct and
         plant.soil_min_temp_c == last_config.soil_min_temp_c and
+        plant.soil_freeze_risk_temp_c == last_config.soil_freeze_risk_temp_c and
         plant.irrigation_cooldown_cycles == last_config.irrigation_cooldown_cycles and
         plant.measure_period_ms == last_config.measure_period_ms and
         plant.irrigate_time_ms == last_config.irrigate_time_ms
@@ -91,6 +92,7 @@ def activate_plant(plant_id: int, db: Session = Depends(get_db)):
         soil_start_irrigation_pct=plant.soil_start_irrigation_pct,
         soil_stop_irrigation_pct=plant.soil_stop_irrigation_pct,
         soil_min_temp_c=plant.soil_min_temp_c,
+        soil_freeze_risk_temp_c=plant.soil_freeze_risk_temp_c,
         irrigation_cooldown_cycles=plant.irrigation_cooldown_cycles,
         measure_period_ms=plant.measure_period_ms,
         irrigate_time_ms=plant.irrigate_time_ms,

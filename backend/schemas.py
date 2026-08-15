@@ -126,6 +126,7 @@ class DeviceConfigUpdate(BaseModel):
     soil_start_irrigation_pct: float
     soil_stop_irrigation_pct:  float
     soil_min_temp_c:           float
+    soil_freeze_risk_temp_c:   float
     irrigation_cooldown_cycles: int
     measure_period_ms:         int
     irrigate_time_ms:          int
@@ -153,6 +154,7 @@ class PlantCreate(BaseModel):
     soil_start_irrigation_pct: float
     soil_stop_irrigation_pct:  float
     soil_min_temp_c:           float
+    soil_freeze_risk_temp_c:   float
     irrigation_cooldown_cycles: int
     measure_period_ms:         int
     irrigate_time_ms:          int
