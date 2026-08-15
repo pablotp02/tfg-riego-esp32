@@ -81,9 +81,9 @@ class SystemCycle(Base):
 
     cycle_number = Column(Integer, nullable=False)
 
-    reading_id    = Column(Integer, ForeignKey("sensor_readings.id"), nullable=False)
-    irrigation_id = Column(Integer, ForeignKey("irrigation_events.id"), nullable=False)
-    power_id      = Column(Integer, ForeignKey("power_states.id"), nullable=False)
+    reading_id    = Column(Integer, ForeignKey("sensor_readings.id"), nullable=False, unique=True)
+    irrigation_id = Column(Integer, ForeignKey("irrigation_events.id"), nullable=False, unique=True)
+    power_id      = Column(Integer, ForeignKey("power_states.id"), nullable=False, unique=True)
 
     cooldown_current  = Column(SmallInteger)
     cooldown_required = Column(SmallInteger)
