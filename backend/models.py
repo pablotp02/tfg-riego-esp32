@@ -33,7 +33,7 @@ class IrrigationEvent(Base):
     duration_ms = Column(Integer)
     reason      = Column(Text)
 
-    reading_id = Column(Integer, ForeignKey("sensor_readings.id"))
+    reading_id = Column(Integer, ForeignKey("sensor_readings.id"), nullable=False, unique=True)
 
     # Relaciones
     reading = relationship("SensorReading", back_populates="irrigation_event")
@@ -67,7 +67,7 @@ class SystemError(Base):
     error_type = Column(String(32), nullable=False)
     reason     = Column(Text)
 
-    reading_id = Column(Integer, ForeignKey("sensor_readings.id"))
+    reading_id = Column(Integer, ForeignKey("sensor_readings.id"), unique=True)
 
     # Relaciones
     reading = relationship("SensorReading", back_populates="errors")
