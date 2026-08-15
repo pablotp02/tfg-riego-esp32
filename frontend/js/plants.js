@@ -204,6 +204,7 @@ function renderPlantCard(plant) {
                 Inicio riego: ${plant.soil_start_irrigation_pct}% &middot;
                 Parada riego: ${plant.soil_stop_irrigation_pct}%<br>
                 Temp. mínima: ${plant.soil_min_temp_c}ºC &middot;
+                Riesgo congelación: ${plant.soil_freeze_risk_temp_c}ºC<br>
                 Cooldown: ${plant.irrigation_cooldown_cycles} ciclos<br>
                 Medida: ${plant.measure_period_ms / 1000}s &middot;
                 Riego: ${plant.irrigate_time_ms / 1000}s
@@ -294,8 +295,9 @@ function openModal(mode, plant = null) {
         document.getElementById('f-name').value     = plant.name;
         document.getElementById('f-start').value    = plant.soil_start_irrigation_pct;
         document.getElementById('f-stop').value     = plant.soil_stop_irrigation_pct;
-        document.getElementById('f-mintemp').value  = plant.soil_min_temp_c;
-        document.getElementById('f-cooldown').value = plant.irrigation_cooldown_cycles;
+        document.getElementById('f-mintemp').value    = plant.soil_min_temp_c;
+        document.getElementById('f-freezetemp').value = plant.soil_freeze_risk_temp_c;
+        document.getElementById('f-cooldown').value   = plant.irrigation_cooldown_cycles;
         document.getElementById('f-measure').value  = plant.measure_period_ms / 1000;
         document.getElementById('f-irrigate').value = plant.irrigate_time_ms / 1000;
 
@@ -342,6 +344,12 @@ plantForm.addEventListener('submit', async (e) => {
         showInfoModal('El umbral de inicio de riego debe ser menor que el umbral de parada de riego.', true);
         return;
     }
+    const minTemp = parseFloat(document.getElementById('f-mintemp').value);
+    const freezeTemp = parseFloat(document.getElementById('f-freezetemp').value);
+    if (freezeTemp >= minTemp) {
+        showInfoModal('La temperatura de riesgo de congelación debe ser menor que la temperatura mínima de riego.', true);
+        return;
+    }
     if (cooldown < 0 || cooldown > 5) {
         showInfoModal('El cooldown debe estar entre 0 y 5 ciclos, ya que cada ciclo puede representar varias horas de espera entre riegos.', true);
         return;
@@ -356,6 +364,7 @@ plantForm.addEventListener('submit', async (e) => {
         soil_start_irrigation_pct:  start,
         soil_stop_irrigation_pct:   stop,
         soil_min_temp_c:            parseFloat(document.getElementById('f-mintemp').value),
+        soil_freeze_risk_temp_c:    parseFloat(document.getElementById('f-freezetemp').value),
         irrigation_cooldown_cycles: cooldown,
         measure_period_ms:          measure * 1000,
         irrigate_time_ms:           irrigate * 1000,
