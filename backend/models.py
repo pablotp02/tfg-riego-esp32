@@ -123,7 +123,6 @@ class Alert(Base):
     alert_type = Column(String(32), nullable=False)
     message    = Column(Text)
     sent       = Column(Boolean, nullable=False, default=False)
-    channel    = Column(String(16))
 
     cycle_id = Column(Integer, ForeignKey("system_cycles.id"))
 

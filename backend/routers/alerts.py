@@ -84,7 +84,6 @@ def check_device_disconnected(db: Session):
         alert_type="DEVICE_DISCONNECTED",
         message=alert_message,
         sent=False,
-        channel="telegram",
         cycle_id=None
     )
     db.add(new_alert)

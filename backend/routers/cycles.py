@@ -112,7 +112,6 @@ def _create_cycle_internal(payload: schemas.CyclePayload, db: Session):
             alert_type = alert_type,
             message    = alert_message,
             sent       = False,
-            channel    = "telegram",
             cycle_id   = cycle.id
         )
         db.add(alert)
@@ -174,7 +173,6 @@ def check_repeated_sensor_error(db: Session, cycle_id: int):
         alert_type="SENSOR_ERROR_REPEATED",
         message=alert_message,
         sent=False,
-        channel="telegram",
         cycle_id=cycle_id
     )
     db.add(new_alert)
@@ -206,7 +204,6 @@ def check_soil_temperature_alerts(db: Session, soil_temp: float | None, cycle_id
             alert_type="SOIL_TEMP_LOW",
             message=alert_message,
             sent=False,
-            channel="telegram",
             cycle_id=cycle_id
         )
         db.add(alert)
@@ -220,7 +217,6 @@ def check_soil_temperature_alerts(db: Session, soil_temp: float | None, cycle_id
             alert_type="SOIL_FREEZE_RISK",
             message=alert_message,
             sent=False,
-            channel="telegram",
             cycle_id=cycle_id
         )
         db.add(alert)

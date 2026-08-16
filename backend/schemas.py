@@ -87,7 +87,6 @@ class AlertCreate(BaseModel):
     alert_type: str
     message:    Optional[str] = None
     sent:       bool          = False
-    channel:    Optional[str] = None
     cycle_id:   Optional[int] = None
 
 class AlertOut(AlertCreate):
