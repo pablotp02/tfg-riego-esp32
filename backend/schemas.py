@@ -25,7 +25,6 @@ class IrrigationEventCreate(BaseModel):
     irrigated:   bool
     duration_ms: Optional[int]   = None
     reason:      Optional[str]   = None
-    reading_id:  Optional[int]   = None
 
 class IrrigationEventOut(IrrigationEventCreate):
     id:          int

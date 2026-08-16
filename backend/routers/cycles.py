@@ -74,8 +74,7 @@ def _create_cycle_internal(payload: schemas.CyclePayload, db: Session):
     irrigation = models.IrrigationEvent(
         irrigated   = payload.irrigated,
         duration_ms = payload.duration_ms if payload.irrigated else None,
-        reason      = payload.irrigation_reason,
-        reading_id  = sensor.id
+        reason      = payload.irrigation_reason
     )
     db.add(irrigation)
     db.flush()

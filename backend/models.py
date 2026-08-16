@@ -18,9 +18,8 @@ class SensorReading(Base):
     validated = Column(Boolean, nullable=False)
 
     # Relaciones
-    irrigation_event = relationship("IrrigationEvent", back_populates="reading")
-    errors           = relationship("SystemError", back_populates="reading")
-    cycle            = relationship("SystemCycle", back_populates="reading")
+    errors = relationship("SystemError", back_populates="reading")
+    cycle  = relationship("SystemCycle", back_populates="reading")
 
 
 class IrrigationEvent(Base):
@@ -33,11 +32,8 @@ class IrrigationEvent(Base):
     duration_ms = Column(Integer)
     reason      = Column(Text)
 
-    reading_id = Column(Integer, ForeignKey("sensor_readings.id"), nullable=False, unique=True)
-
     # Relaciones
-    reading = relationship("SensorReading", back_populates="irrigation_event")
-    cycle   = relationship("SystemCycle", back_populates="irrigation")
+    cycle = relationship("SystemCycle", back_populates="irrigation")
 
 
 class PowerState(Base):
