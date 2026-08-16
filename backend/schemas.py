@@ -137,6 +137,9 @@ class DeviceConfigOut(DeviceConfigUpdate):
     class Config:
         from_attributes = True
 
+class DeviceConfigHistoryOut(DeviceConfigOut):
+    last_synced_at: Optional[datetime] = None
+
 # ─── Device Sync Log ────────────────────────────────────────────────────────
 
 class DeviceSyncLogOut(BaseModel):

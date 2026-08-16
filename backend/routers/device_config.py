@@ -69,14 +69,25 @@ def get_sync_status(db: Session = Depends(get_db)):
         "is_synced": synced
     }
 
-@router.get("/history", response_model=List[schemas.DeviceConfigOut])
+@router.get("/history", response_model=List[schemas.DeviceConfigHistoryOut])
 def get_config_history(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     """
     Devuelve el historial de versiones de configuración, ordenado de
     más reciente a más antigua. La primera entrada de la primera
     página corresponde a la configuración actualmente en uso por el
-    dispositivo (la misma que devuelve GET /latest).
+    dispositivo (la misma que devuelve GET /latest). Cada versión
+    incluye la fecha de su última sincronización con el dispositivo,
+    si se produjo alguna.
     """
-    return db.query(models.DeviceConfig)\
-             .order_by(models.DeviceConfig.updated_at.desc())\
-             .offset(skip).limit(limit).all()
+    configs = db.query(models.DeviceConfig)\
+                .order_by(models.DeviceConfig.updated_at.desc())\
+                .offset(skip).limit(limit).all()
+
+    for config in configs:
+        last_sync = db.query(models.DeviceSyncLog)\
+                       .filter(models.DeviceSyncLog.config_id == config.id)\
+                       .order_by(models.DeviceSyncLog.synced_at.desc())\
+                       .first()
+        config.last_synced_at = last_sync.synced_at if last_sync else None
+
+    return configs

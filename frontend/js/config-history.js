@@ -43,7 +43,7 @@ async function loadConfigHistory() {
         const data = await res.json();
 
         if (isFirstPage && data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7">No hay ninguna configuración registrada todavía</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8">No hay ninguna configuración registrada todavía</td></tr>';
             btnLoadMore.style.display = 'none';
             return;
         }
@@ -55,6 +55,9 @@ async function loadConfigHistory() {
         const rows = data.map((cfg, index) => {
             // Solo la primera fila de la primera página es la versión "actual"
             const isCurrent = isFirstPage && index === 0;
+            const lastSyncText = cfg.last_synced_at
+                ? formatDate(cfg.last_synced_at)
+                : 'Nunca sincronizada';
             return `
                 <tr ${isCurrent ? 'style="background-color: #e8f5ee;"' : ''}>
                     <td>${formatDate(cfg.updated_at)} ${isCurrent ? '<span class="badge-si" style="margin-left:8px;">Actual</span>' : ''}</td>
@@ -64,6 +67,7 @@ async function loadConfigHistory() {
                     <td>${cfg.irrigation_cooldown_cycles} ciclos</td>
                     <td>${(cfg.measure_period_ms / 1000)}s</td>
                     <td>${(cfg.irrigate_time_ms / 1000)}s</td>
+                    <td>${lastSyncText}</td>
                 </tr>
             `;
         }).join('');
@@ -77,7 +81,7 @@ async function loadConfigHistory() {
             noMoreHistory.style.display = 'block';
         }
     } catch (err) {
-        tableBody.innerHTML = '<tr><td colspan="7">Error al cargar el historial</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="8">Error al cargar el historial</td></tr>';
     }
 }
 
