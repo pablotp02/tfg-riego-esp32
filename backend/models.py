@@ -264,6 +264,10 @@ class NotificationDelivery(Base):
     __table_args__ = (
         CheckConstraint("channel IN ('telegram', 'email')", name="delivery_channel_valid_values"),
         UniqueConstraint("alert_id", "channel", name="uq_notification_delivery_alert_channel"),
+        CheckConstraint("attempted_count >= 0", name="delivery_attempted_non_negative"),
+        CheckConstraint("success_count >= 0", name="delivery_success_non_negative"),
+        CheckConstraint("success_count <= attempted_count", name="delivery_success_not_greater_than_attempted"),
+        CheckConstraint("sent = (success_count > 0)", name="delivery_sent_matches_success"),
     )
 
     id              = Column(Integer, primary_key=True, index=True)
