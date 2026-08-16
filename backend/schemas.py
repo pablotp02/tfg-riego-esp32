@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import Optional, List
 
@@ -189,6 +189,13 @@ class NotificationRecipientCreate(BaseModel):
     telegram_chat_id: Optional[str] = None
     email: Optional[str] = None
     enabled: bool = True
+
+    @field_validator("telegram_chat_id", "email", mode="before")
+    @classmethod
+    def empty_string_to_none(cls, value):
+        if isinstance(value, str) and value.strip() == "":
+            return None
+        return value
 
 class NotificationRecipientOut(NotificationRecipientCreate):
     id: int

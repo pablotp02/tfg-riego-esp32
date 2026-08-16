@@ -245,7 +245,8 @@ class NotificationRecipient(Base):
     __tablename__ = "notification_recipients"
     __table_args__ = (
         CheckConstraint(
-            "telegram_chat_id IS NOT NULL OR email IS NOT NULL",
+            "NULLIF(TRIM(telegram_chat_id), '') IS NOT NULL "
+            "OR NULLIF(TRIM(email), '') IS NOT NULL",
             name="recipient_has_contact_method"
         ),
     )
