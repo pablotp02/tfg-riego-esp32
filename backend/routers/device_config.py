@@ -20,8 +20,9 @@ def get_latest_config(db: Session = Depends(get_db)):
     if not config:
         raise HTTPException(status_code=404, detail="No hay configuración disponible")
 
-    # Registrar que la ESP32 (o quien sea) ha pedido la configuración
-    sync_log = models.DeviceSyncLog()
+    # Registrar que la ESP32 (o quien sea) ha pedido la configuración,
+    # dejando constancia de qué versión concreta se sincronizó
+    sync_log = models.DeviceSyncLog(config_id=config.id)
     db.add(sync_log)
     db.commit()
 

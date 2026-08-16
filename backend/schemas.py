@@ -142,6 +142,7 @@ class DeviceConfigOut(DeviceConfigUpdate):
 class DeviceSyncLogOut(BaseModel):
     id:        int
     synced_at: datetime
+    config_id: int
 
     class Config:
         from_attributes = True

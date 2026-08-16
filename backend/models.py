@@ -167,12 +167,19 @@ class DeviceConfig(Base):
     measure_period_ms         = Column(Integer, nullable=False, default=5000)
     irrigate_time_ms          = Column(Integer, nullable=False, default=2000)
 
+    # Relaciones
+    sync_logs = relationship("DeviceSyncLog", back_populates="config")
+
 
 class DeviceSyncLog(Base):
     __tablename__ = "device_sync_log"
 
     id          = Column(Integer, primary_key=True, index=True)
     synced_at   = Column(DateTime, server_default=func.now())
+    config_id   = Column(Integer, ForeignKey("device_config.id"), nullable=False)
+
+    # Relaciones
+    config = relationship("DeviceConfig", back_populates="sync_logs")
 
 class Plant(Base):
     __tablename__ = "plants"
