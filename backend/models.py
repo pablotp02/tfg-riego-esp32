@@ -130,6 +130,14 @@ class DeviceConfig(Base):
             "soil_start_irrigation_pct < soil_stop_irrigation_pct",
             name="device_config_start_before_stop"
         ),
+        CheckConstraint(
+            "soil_start_irrigation_pct >= 0 AND soil_start_irrigation_pct <= 100",
+            name="device_config_start_range"
+        ),
+        CheckConstraint(
+            "soil_stop_irrigation_pct >= 0 AND soil_stop_irrigation_pct <= 100",
+            name="device_config_stop_range"
+        ),
     )
 
     id          = Column(Integer, primary_key=True, index=True)
