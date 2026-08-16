@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, Boolean, String, Text, DateTime, SmallInteger, ForeignKey
+from sqlalchemy import Column, Integer, Float, Boolean, String, Text, DateTime, SmallInteger, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -133,6 +133,14 @@ class DeviceSyncLog(Base):
 
 class Plant(Base):
     __tablename__ = "plants"
+    __table_args__ = (
+        Index(
+            "only_one_active_plant",    # nombre del índice
+            "is_active",                # columna sobre la que aplica
+            unique=True,                # debe ser única...
+            postgresql_where=(Column("is_active") == True)  # ...pero solo entre las filas donde is_active = True, es decir
+        ),                                                  # solo puede haber una True, pero si permite varias False
+    )
 
     id          = Column(Integer, primary_key=True, index=True)
     created_at  = Column(DateTime, server_default=func.now())
