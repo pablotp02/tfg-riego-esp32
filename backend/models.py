@@ -44,6 +44,17 @@ class IrrigationEvent(Base):
 
 class PowerState(Base):
     __tablename__ = "power_states"
+    __table_args__ = (
+        CheckConstraint("power_mode IN (0, 1, 2)", name="power_mode_valid_values"),
+        CheckConstraint(
+            "battery_pct_simulated >= 0 AND battery_pct_simulated <= 100",
+            name="battery_pct_simulated_range"
+        ),
+        CheckConstraint(
+            "battery_pct_real IS NULL OR (battery_pct_real >= 0 AND battery_pct_real <= 100)",
+            name="battery_pct_real_range"
+        ),
+    )
 
     id          = Column(Integer, primary_key=True, index=True)
     recorded_at = Column(DateTime, server_default=func.now())
