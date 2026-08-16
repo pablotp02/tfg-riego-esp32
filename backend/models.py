@@ -243,12 +243,18 @@ class Plant(Base):
 
 class NotificationRecipient(Base):
     __tablename__ = "notification_recipients"
+    __table_args__ = (
+        CheckConstraint(
+            "telegram_chat_id IS NOT NULL OR email IS NOT NULL",
+            name="recipient_has_contact_method"
+        ),
+    )
 
     id      = Column(Integer, primary_key=True, index=True)
     name    = Column(String(64), nullable=False)
 
-    telegram_chat_id = Column(String(64), nullable=True)
-    email             = Column(String(128), nullable=True)
+    telegram_chat_id = Column(String(64), nullable=True, unique=True)
+    email             = Column(String(128), nullable=True, unique=True)
 
     enabled = Column(Boolean, nullable=False, default=True)
 
