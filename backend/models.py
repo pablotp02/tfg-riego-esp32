@@ -138,6 +138,10 @@ class DeviceConfig(Base):
             "soil_stop_irrigation_pct >= 0 AND soil_stop_irrigation_pct <= 100",
             name="device_config_stop_range"
         ),
+        CheckConstraint(
+            "irrigation_cooldown_cycles >= 0",
+            name="device_config_cooldown_non_negative"
+        ),
     )
 
     id          = Column(Integer, primary_key=True, index=True)
