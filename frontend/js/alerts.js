@@ -81,7 +81,7 @@ function renderAlerts() {
             <div>
                 <div class="alert-type">
                     ${alert.sent ? '✅' : '⚠️'} ${alert.alert_type}
-                    ${alert.sent ? '<span class="badge-si" style="margin-left:8px;">Enviada</span>' : '<span class="badge-no" style="margin-left:8px;">Pendiente</span>'}
+                    ${alert.sent ? '<span class="badge-si" style="margin-left:8px;">Gestionada</span>' : '<span class="badge-no" style="margin-left:8px;">Sin gestionar</span>'}
                 </div>
                 <div class="alert-message">${alert.message || ''}</div>
                 ${renderDeliveryDetail(alert.deliveries)}
@@ -89,8 +89,8 @@ function renderAlerts() {
             <div class="alert-item-right">
                 <div class="alert-date">${formatDate(alert.recorded_at)}</div>
                 ${alert.sent
-                    ? `<button class="btn-neutral btn-small" onclick="markAsPending(${alert.id})">Marcar como pendiente</button>`
-                    : `<button class="btn-activate btn-small" onclick="markAsSent(${alert.id})">Marcar como enviada</button>`
+                    ? `<button class="btn-neutral btn-small" onclick="markAsPending(${alert.id})">Marcar como sin gestionar</button>`
+                    : `<button class="btn-activate btn-small" onclick="markAsSent(${alert.id})">Marcar como gestionada</button>`
                 }
             </div>
         </div>

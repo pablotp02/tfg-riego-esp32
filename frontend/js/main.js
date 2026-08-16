@@ -203,7 +203,7 @@ async function updateAlerts() {
         const container = document.getElementById('alerts-container');
 
         if (!data.length) {
-            container.innerHTML = '<p class="no-alerts">No hay más alertas pendientes de ser enviadas</p>';
+            container.innerHTML = '<p class="no-alerts">No hay más alertas por gestionar</p>';
             return;
         }
 
