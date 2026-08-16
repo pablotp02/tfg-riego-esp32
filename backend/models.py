@@ -183,6 +183,10 @@ class Plant(Base):
             "soil_stop_irrigation_pct >= 0 AND soil_stop_irrigation_pct <= 100",
             name="plant_stop_range"
         ),
+        CheckConstraint(
+            "irrigation_cooldown_cycles >= 0",
+            name="plant_cooldown_non_negative"
+        ),
     )
 
     id          = Column(Integer, primary_key=True, index=True)
