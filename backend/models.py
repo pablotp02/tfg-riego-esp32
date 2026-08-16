@@ -67,8 +67,7 @@ class PowerState(Base):
     wakeup_cause = Column(String(32))
 
     # Relaciones
-    cycle  = relationship("SystemCycle", back_populates="power")
-    alerts = relationship("Alert", back_populates="power")
+    cycle = relationship("SystemCycle", back_populates="power")
 
 
 class SystemError(Base):
@@ -105,6 +104,7 @@ class SystemCycle(Base):
     reading    = relationship("SensorReading", back_populates="cycle")
     irrigation = relationship("IrrigationEvent", back_populates="cycle")
     power      = relationship("PowerState", back_populates="cycle")
+    alerts     = relationship("Alert", back_populates="cycle")
 
 
 class Alert(Base):
@@ -118,10 +118,10 @@ class Alert(Base):
     sent       = Column(Boolean, nullable=False, default=False)
     channel    = Column(String(16))
 
-    power_id = Column(Integer, ForeignKey("power_states.id"), unique=True)
+    cycle_id = Column(Integer, ForeignKey("system_cycles.id"))
 
     # Relaciones
-    power = relationship("PowerState", back_populates="alerts")
+    cycle = relationship("SystemCycle", back_populates="alerts")
 
 class DeviceConfig(Base):
     __tablename__ = "device_config"

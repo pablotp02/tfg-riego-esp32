@@ -53,14 +53,6 @@ def _create_cycle_internal(payload: schemas.CyclePayload, db: Session):
     db.add(sensor)
     db.flush()  # para obtener el id sin hacer commit todavía
 
-    # Comprobar patrón de errores repetidos de sensor tras guardar
-    # esta lectura (incluye la actual en el recuento)
-    check_repeated_sensor_error(db)
-
-    # Comprobar si la temperatura del suelo requiere generar alguna
-    # alerta (frío perjudicial para la planta, o riesgo de congelación)
-    check_soil_temperature_alerts(db, payload.soil_temp)
-
     # 2) Guardar error de sensor si lo hay
     if payload.sensor_error:
         error = models.SystemError(
@@ -90,26 +82,8 @@ def _create_cycle_internal(payload: schemas.CyclePayload, db: Session):
     db.add(power)
     db.flush()
 
-    # 5) Comprobar si hay que generar alerta de batería
-    if payload.battery_pct <= 20.0:
-        alert_type = "BATTERY_CRITICAL" if payload.battery_pct <= 10.0 else "BATTERY_LOW"
-        alert_message = f"Nivel de batería: {payload.battery_pct}%"
-
-        alert = models.Alert(
-            alert_type = alert_type,
-            message    = alert_message,
-            sent       = False,
-            channel    = "telegram",
-            power_id   = power.id
-        )
-        db.add(alert)
-        db.flush()  # para poder actualizar alert.sent tras el envío
-
-        emoji = "🔴" if alert_type == "BATTERY_CRITICAL" else "🟠"
-        sent_ok = notify_alert(db, f"{emoji} {alert_type}\n{alert_message}")
-        alert.sent = sent_ok
-
-    # 6) Guardar resumen del ciclo
+    # 5) Guardar resumen del ciclo (antes de las alertas, para que estas
+    # puedan referenciarlo mediante cycle_id)
     cycle = models.SystemCycle(
         cycle_number      = payload.cycle_number,
         reading_id        = sensor.id,
@@ -119,6 +93,35 @@ def _create_cycle_internal(payload: schemas.CyclePayload, db: Session):
         cooldown_required = payload.cooldown_required
     )
     db.add(cycle)
+    db.flush()  # para obtener cycle.id, usado por las alertas siguientes
+
+    # 6) Comprobar patrón de errores repetidos de sensor tras guardar
+    # esta lectura (incluye la actual en el recuento)
+    check_repeated_sensor_error(db, cycle.id)
+
+    # 7) Comprobar si la temperatura del suelo requiere generar alguna
+    # alerta (frío perjudicial para la planta, o riesgo de congelación)
+    check_soil_temperature_alerts(db, payload.soil_temp, cycle.id)
+
+    # 8) Comprobar si hay que generar alerta de batería
+    if payload.battery_pct <= 20.0:
+        alert_type = "BATTERY_CRITICAL" if payload.battery_pct <= 10.0 else "BATTERY_LOW"
+        alert_message = f"Nivel de batería: {payload.battery_pct}%"
+
+        alert = models.Alert(
+            alert_type = alert_type,
+            message    = alert_message,
+            sent       = False,
+            channel    = "telegram",
+            cycle_id   = cycle.id
+        )
+        db.add(alert)
+        db.flush()  # para poder actualizar alert.sent tras el envío
+
+        emoji = "🔴" if alert_type == "BATTERY_CRITICAL" else "🟠"
+        sent_ok = notify_alert(db, f"{emoji} {alert_type}\n{alert_message}")
+        alert.sent = sent_ok
+
     db.commit()
     db.refresh(cycle)
 
@@ -135,11 +138,12 @@ def get_cycles(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
 def power_mode_to_str(mode: int) -> str:
     return {0: "NORMAL", 1: "LOW", 2: "CRITICAL"}.get(mode, "DESCONOCIDO")
 
-def check_repeated_sensor_error(db: Session):
+def check_repeated_sensor_error(db: Session, cycle_id: int):
     """
     Comprueba si las últimas SENSOR_ERROR_THRESHOLD lecturas de sensor
     son todas inválidas. Si es así, y no hay ya una alerta reciente del
-    mismo tipo, genera una nueva alerta SENSOR_ERROR_REPEATED.
+    mismo tipo, genera una nueva alerta SENSOR_ERROR_REPEATED, asociada
+    al ciclo actual.
     """
     recent_readings = db.query(models.SensorReading)\
                          .order_by(models.SensorReading.recorded_at.desc())\
@@ -171,7 +175,7 @@ def check_repeated_sensor_error(db: Session):
         message=alert_message,
         sent=False,
         channel="telegram",
-        power_id=None
+        cycle_id=cycle_id
     )
     db.add(new_alert)
     db.flush()
@@ -179,11 +183,12 @@ def check_repeated_sensor_error(db: Session):
     sent_ok = notify_alert(db, f"⚠️ SENSOR_ERROR_REPEATED\n{alert_message}")
     new_alert.sent = sent_ok
 
-def check_soil_temperature_alerts(db: Session, soil_temp: float | None):
+def check_soil_temperature_alerts(db: Session, soil_temp: float | None, cycle_id: int):
     """
     Comprueba si la temperatura del suelo del ciclo actual está por
     debajo del umbral mínimo de riego o del umbral de riesgo de
-    congelación, generando la alerta correspondiente en cada caso.
+    congelación, generando la alerta correspondiente en cada caso,
+    asociada al ciclo actual.
     """
     if soil_temp is None:
         return
@@ -202,7 +207,7 @@ def check_soil_temperature_alerts(db: Session, soil_temp: float | None):
             message=alert_message,
             sent=False,
             channel="telegram",
-            power_id=None
+            cycle_id=cycle_id
         )
         db.add(alert)
         db.flush()
@@ -216,7 +221,7 @@ def check_soil_temperature_alerts(db: Session, soil_temp: float | None):
             message=alert_message,
             sent=False,
             channel="telegram",
-            power_id=None
+            cycle_id=cycle_id
         )
         db.add(alert)
         db.flush()
