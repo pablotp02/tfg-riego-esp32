@@ -276,7 +276,7 @@ class NotificationDelivery(Base):
     sent            = Column(Boolean, nullable=False, default=False)
     attempted_count = Column(Integer, nullable=False, default=0)
     success_count   = Column(Integer, nullable=False, default=0)
-    sent_at         = Column(DateTime, server_default=func.now())
+    attempted_at    = Column(DateTime, server_default=func.now())
 
     # Relaciones
     alert = relationship("Alert", back_populates="deliveries")

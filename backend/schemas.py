@@ -95,7 +95,7 @@ class NotificationDeliveryOut(BaseModel):
     sent:            bool
     attempted_count: int
     success_count:   int
-    sent_at:         datetime
+    attempted_at:    datetime
 
     class Config:
         from_attributes = True
