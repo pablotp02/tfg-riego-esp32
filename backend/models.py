@@ -279,9 +279,12 @@ class NotificationDelivery(Base):
 
 class NotificationSettings(Base):
     __tablename__ = "notification_settings"
+    __table_args__ = (
+        CheckConstraint("id = 1", name="notification_settings_singleton"),
+    )
 
     id = Column(Integer, primary_key=True, default=1)
 
-    channel_telegram_enabled = Column(Boolean, nullable=False, default=True)
+    channel_telegram_enabled = Column(Boolean, nullable=False, default=False)
     channel_email_enabled    = Column(Boolean, nullable=False, default=False)
 
