@@ -142,6 +142,14 @@ class DeviceConfig(Base):
             "irrigation_cooldown_cycles >= 0",
             name="device_config_cooldown_non_negative"
         ),
+        CheckConstraint(
+            "measure_period_ms > 0",
+            name="device_config_measure_period_positive"
+        ),
+        CheckConstraint(
+            "irrigate_time_ms > 0",
+            name="device_config_irrigate_time_positive"
+        ),
     )
 
     id          = Column(Integer, primary_key=True, index=True)
