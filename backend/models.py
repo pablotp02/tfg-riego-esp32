@@ -128,7 +128,8 @@ class Alert(Base):
     cycle_id = Column(Integer, ForeignKey("system_cycles.id"))
 
     # Relaciones
-    cycle = relationship("SystemCycle", back_populates="alerts")
+    cycle      = relationship("SystemCycle", back_populates="alerts")
+    deliveries = relationship("NotificationDelivery", back_populates="alert")
 
 class DeviceConfig(Base):
     __tablename__ = "device_config"
@@ -253,6 +254,24 @@ class NotificationRecipient(Base):
     enabled = Column(Boolean, nullable=False, default=True)
 
 
+class NotificationDelivery(Base):
+    __tablename__ = "notification_deliveries"
+    __table_args__ = (
+        CheckConstraint("channel IN ('telegram', 'email')", name="delivery_channel_valid_values"),
+    )
+
+    id              = Column(Integer, primary_key=True, index=True)
+    alert_id        = Column(Integer, ForeignKey("alerts.id"), nullable=False)
+    channel         = Column(String(16), nullable=False)
+    sent            = Column(Boolean, nullable=False, default=False)
+    attempted_count = Column(Integer, nullable=False, default=0)
+    success_count   = Column(Integer, nullable=False, default=0)
+    sent_at         = Column(DateTime, server_default=func.now())
+
+    # Relaciones
+    alert = relationship("Alert", back_populates="deliveries")
+
+
 class NotificationSettings(Base):
     __tablename__ = "notification_settings"
 
@@ -260,3 +279,4 @@ class NotificationSettings(Base):
 
     channel_telegram_enabled = Column(Boolean, nullable=False, default=True)
     channel_email_enabled    = Column(Boolean, nullable=False, default=False)
+

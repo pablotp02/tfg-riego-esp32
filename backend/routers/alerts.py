@@ -90,7 +90,7 @@ def check_device_disconnected(db: Session):
     db.add(new_alert)
     db.flush()
 
-    sent_ok = notify_alert(db, f"🔌 DEVICE_DISCONNECTED\n{alert_message}")
+    sent_ok = notify_alert(db, new_alert.id, f"🔌 DEVICE_DISCONNECTED\n{alert_message}")
     new_alert.sent = sent_ok
 
     db.commit()

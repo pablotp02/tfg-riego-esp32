@@ -24,12 +24,17 @@ def get_or_create_settings(db: Session) -> models.NotificationSettings:
         db.refresh(settings)
     return settings
 
-def notify_alert(db: Session, message: str, subject: str = "Alerta - Sistema de Riego Automático") -> bool:
+def notify_alert(db: Session, alert_id: int, message: str, subject: str = "Alerta - Sistema de Riego Automático") -> bool:
     """
     Envía una notificación a todos los destinatarios activos, según
     los canales habilitados en los ajustes globales. Centraliza la
     lógica de envío para no repetirla en cada punto donde se genera
     una alerta (batería baja, desconexión, error de sensor, etc.).
+
+    Por cada canal activo, registra en NotificationDelivery el
+    resultado del envío: si tuvo éxito con al menos un destinatario,
+    y cuántos destinatarios se intentaron frente a cuántos tuvieron
+    éxito, sin identificar a ningún destinatario en concreto.
 
     Devuelve True si el mensaje se envió correctamente a al menos un
     destinatario, por cualquiera de los canales; False si no había
@@ -46,10 +51,23 @@ def notify_alert(db: Session, message: str, subject: str = "Alerta - Sistema de 
                 models.NotificationRecipient.telegram_chat_id.isnot(None)
             ).all()
 
+        attempted = len(telegram_recipients)
+        successes = 0
         for recipient in telegram_recipients:
             success = send_telegram_message(message, chat_id=recipient.telegram_chat_id)
             if success:
+                successes += 1
                 any_success = True
+
+        if attempted > 0:
+            delivery = models.NotificationDelivery(
+                alert_id=alert_id,
+                channel="telegram",
+                sent=successes > 0,
+                attempted_count=attempted,
+                success_count=successes
+            )
+            db.add(delivery)
 
     if settings.channel_email_enabled:
         email_recipients = db.query(models.NotificationRecipient)\
@@ -58,10 +76,25 @@ def notify_alert(db: Session, message: str, subject: str = "Alerta - Sistema de 
                 models.NotificationRecipient.email.isnot(None)
             ).all()
 
+        attempted = len(email_recipients)
+        successes = 0
         for recipient in email_recipients:
             success = send_email(subject=subject, body=message, to_address=recipient.email)
             if success:
+                successes += 1
                 any_success = True
+
+        if attempted > 0:
+            delivery = models.NotificationDelivery(
+                alert_id=alert_id,
+                channel="email",
+                sent=successes > 0,
+                attempted_count=attempted,
+                success_count=successes
+            )
+            db.add(delivery)
+
+    db.flush()
 
     return any_success
 

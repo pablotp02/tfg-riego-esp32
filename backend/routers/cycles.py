@@ -119,7 +119,7 @@ def _create_cycle_internal(payload: schemas.CyclePayload, db: Session):
         db.flush()  # para poder actualizar alert.sent tras el envío
 
         emoji = "🔴" if alert_type == "BATTERY_CRITICAL" else "🟠"
-        sent_ok = notify_alert(db, f"{emoji} {alert_type}\n{alert_message}")
+        sent_ok = notify_alert(db, alert.id, f"{emoji} {alert_type}\n{alert_message}")
         alert.sent = sent_ok
 
     db.commit()
@@ -180,7 +180,7 @@ def check_repeated_sensor_error(db: Session, cycle_id: int):
     db.add(new_alert)
     db.flush()
 
-    sent_ok = notify_alert(db, f"⚠️ SENSOR_ERROR_REPEATED\n{alert_message}")
+    sent_ok = notify_alert(db, new_alert.id, f"⚠️ SENSOR_ERROR_REPEATED\n{alert_message}")
     new_alert.sent = sent_ok
 
 def check_soil_temperature_alerts(db: Session, soil_temp: float | None, cycle_id: int):
@@ -211,7 +211,7 @@ def check_soil_temperature_alerts(db: Session, soil_temp: float | None, cycle_id
         )
         db.add(alert)
         db.flush()
-        sent_ok = notify_alert(db, f"🥶 SOIL_TEMP_LOW\n{alert_message}")
+        sent_ok = notify_alert(db, alert.id, f"🥶 SOIL_TEMP_LOW\n{alert_message}")
         alert.sent = sent_ok
 
     if soil_temp < last_config.soil_freeze_risk_temp_c:
@@ -225,7 +225,7 @@ def check_soil_temperature_alerts(db: Session, soil_temp: float | None, cycle_id
         )
         db.add(alert)
         db.flush()
-        sent_ok = notify_alert(db, f"❄️ SOIL_FREEZE_RISK\n{alert_message}")
+        sent_ok = notify_alert(db, alert.id, f"❄️ SOIL_FREEZE_RISK\n{alert_message}")
         alert.sent = sent_ok
 
 @router.get("/export/range")
