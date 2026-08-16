@@ -27,8 +27,20 @@ def create_cycle(payload: schemas.CyclePayload, db: Session = Depends(get_db)):
     """
     Endpoint principal — recibe el payload completo del firmware ESP32
     y lo desglosa en las tablas correspondientes de la base de datos.
-    """
 
+    Todas las inserciones (lectura, evento de riego, estado energético,
+    posibles alertas y el propio ciclo) se realizan de forma atómica:
+    si cualquiera de ellas falla, se revierte la transacción completa,
+    evitando dejar registros huérfanos sin su ciclo correspondiente.
+    """
+    try:
+        return _create_cycle_internal(payload, db)
+    except Exception:
+        db.rollback()
+        raise
+
+
+def _create_cycle_internal(payload: schemas.CyclePayload, db: Session):
     # 1) Guardar lectura del sensor
     sensor = models.SensorReading(
         soil_moisture = payload.soil_moisture,
