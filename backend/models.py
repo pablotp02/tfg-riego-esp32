@@ -125,6 +125,12 @@ class Alert(Base):
 
 class DeviceConfig(Base):
     __tablename__ = "device_config"
+    __table_args__ = (
+        CheckConstraint(
+            "soil_start_irrigation_pct < soil_stop_irrigation_pct",
+            name="device_config_start_before_stop"
+        ),
+    )
 
     id          = Column(Integer, primary_key=True, index=True)
     updated_at  = Column(DateTime, server_default=func.now(), onupdate=func.now())
