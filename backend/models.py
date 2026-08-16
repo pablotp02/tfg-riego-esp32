@@ -195,6 +195,14 @@ class Plant(Base):
             "irrigation_cooldown_cycles >= 0",
             name="plant_cooldown_non_negative"
         ),
+        CheckConstraint(
+            "measure_period_ms > 0",
+            name="plant_measure_period_positive"
+        ),
+        CheckConstraint(
+            "irrigate_time_ms > 0",
+            name="plant_irrigate_time_positive"
+        ),
     )
 
     id          = Column(Integer, primary_key=True, index=True)
