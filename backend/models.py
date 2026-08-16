@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, Boolean, String, Text, DateTime, SmallInteger, ForeignKey, Index
+from sqlalchemy import Column, Integer, Float, Boolean, String, Text, DateTime, SmallInteger, ForeignKey, Index, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -81,8 +81,8 @@ class SystemCycle(Base):
     irrigation_id = Column(Integer, ForeignKey("irrigation_events.id"), nullable=False, unique=True)
     power_id      = Column(Integer, ForeignKey("power_states.id"), nullable=False, unique=True)
 
-    cooldown_current  = Column(SmallInteger)
-    cooldown_required = Column(SmallInteger)
+    cooldown_current  = Column(SmallInteger, CheckConstraint("cooldown_current >= 0"))
+    cooldown_required = Column(SmallInteger, CheckConstraint("cooldown_required >= 0"))
 
     # Relaciones
     reading    = relationship("SensorReading", back_populates="cycle")
