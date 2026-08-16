@@ -109,6 +109,13 @@ class SystemCycle(Base):
 
 class Alert(Base):
     __tablename__ = "alerts"
+    __table_args__ = (
+        CheckConstraint(
+            "alert_type IN ('BATTERY_LOW', 'BATTERY_CRITICAL', 'SENSOR_ERROR_REPEATED', "
+            "'SOIL_TEMP_LOW', 'SOIL_FREEZE_RISK', 'DEVICE_DISCONNECTED')",
+            name="alert_type_valid_values"
+        ),
+    )
 
     id          = Column(Integer, primary_key=True, index=True)
     recorded_at = Column(DateTime, server_default=func.now())
