@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, Boolean, String, Text, DateTime, SmallInteger, ForeignKey, Index, CheckConstraint
+from sqlalchemy import Column, Integer, Float, Boolean, String, Text, DateTime, SmallInteger, ForeignKey, Index, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -263,6 +263,7 @@ class NotificationDelivery(Base):
     __tablename__ = "notification_deliveries"
     __table_args__ = (
         CheckConstraint("channel IN ('telegram', 'email')", name="delivery_channel_valid_values"),
+        UniqueConstraint("alert_id", "channel", name="uq_notification_delivery_alert_channel"),
     )
 
     id              = Column(Integer, primary_key=True, index=True)
