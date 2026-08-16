@@ -207,6 +207,10 @@ class Plant(Base):
             "irrigate_time_ms > 0",
             name="plant_irrigate_time_positive"
         ),
+        CheckConstraint(
+            "soil_freeze_risk_temp_c < soil_min_temp_c",
+            name="plant_freeze_before_min_temp"
+        ),
     )
 
     id          = Column(Integer, primary_key=True, index=True)
