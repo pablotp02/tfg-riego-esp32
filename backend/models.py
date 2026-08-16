@@ -159,6 +159,10 @@ class Plant(Base):
             unique=True,                # debe ser única...
             postgresql_where=(Column("is_active") == True)  # ...pero solo entre las filas donde is_active = True, es decir
         ),                                                  # solo puede haber una True, pero si permite varias False
+        CheckConstraint(
+            "soil_start_irrigation_pct < soil_stop_irrigation_pct",
+            name="plant_start_before_stop"
+        ),
     )
 
     id          = Column(Integer, primary_key=True, index=True)
