@@ -54,6 +54,22 @@ function formatDate(isoString) {
     });
 }
 
+function renderDeliveryDetail(deliveries) {
+    if (!deliveries || deliveries.length === 0) {
+        return '<div class="alert-deliveries">Sin intentos de envío registrados</div>';
+    }
+
+    const channelLabels = { telegram: 'Telegram', email: 'Email' };
+
+    const items = deliveries.map(d => {
+        const icon = d.sent ? '✅' : '❌';
+        const label = channelLabels[d.channel] || d.channel;
+        return `${icon} ${label} (${d.success_count}/${d.attempted_count})`;
+    }).join(' &middot; ');
+
+    return `<div class="alert-deliveries">${items}</div>`;
+}
+
 function renderAlerts() {
     if (allAlerts.length === 0) {
         alertsContainer.innerHTML = '<p class="no-alerts">No hay alertas registradas</p>';
@@ -68,6 +84,7 @@ function renderAlerts() {
                     ${alert.sent ? '<span class="badge-si" style="margin-left:8px;">Enviada</span>' : '<span class="badge-no" style="margin-left:8px;">Pendiente</span>'}
                 </div>
                 <div class="alert-message">${alert.message || ''}</div>
+                ${renderDeliveryDetail(alert.deliveries)}
             </div>
             <div class="alert-item-right">
                 <div class="alert-date">${formatDate(alert.recorded_at)}</div>

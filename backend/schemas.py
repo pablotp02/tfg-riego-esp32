@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 # ─── Sensor Readings ───────────────────────────────────────────────────────────
 
@@ -89,9 +89,21 @@ class AlertCreate(BaseModel):
     sent:       bool          = False
     cycle_id:   Optional[int] = None
 
+class NotificationDeliveryOut(BaseModel):
+    id:              int
+    channel:         str
+    sent:            bool
+    attempted_count: int
+    success_count:   int
+    sent_at:         datetime
+
+    class Config:
+        from_attributes = True
+
 class AlertOut(AlertCreate):
     id:          int
     recorded_at: datetime
+    deliveries:  List[NotificationDeliveryOut] = []
 
     class Config:
         from_attributes = True
