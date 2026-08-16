@@ -24,6 +24,12 @@ class SensorReading(Base):
 
 class IrrigationEvent(Base):
     __tablename__ = "irrigation_events"
+    __table_args__ = (
+        CheckConstraint(
+            "(irrigated = true) = (duration_ms IS NOT NULL)",
+            name="irrigated_matches_duration"
+        ),
+    )
 
     id          = Column(Integer, primary_key=True, index=True)
     recorded_at = Column(DateTime, server_default=func.now())
