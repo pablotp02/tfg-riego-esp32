@@ -89,8 +89,8 @@ function renderAlerts() {
             <div class="alert-item-right">
                 <div class="alert-date">${formatDate(alert.recorded_at)}</div>
                 ${alert.sent
-                    ? `<button class="btn-neutral btn-small" onclick="markAsPending(${alert.id})">Marcar como sin gestionar</button>`
-                    : `<button class="btn-activate btn-small" onclick="markAsSent(${alert.id})">Marcar como gestionada</button>`
+                    ? `<button class="btn-neutral btn-small" onclick="markAsPending(${alert.id})">Marcar como <strong>sin gestionar</strong></button>`
+                    : `<button class="btn-activate btn-small" onclick="markAsSent(${alert.id})">Marcar como <strong>gestionada</strong></button>`
                 }
             </div>
         </div>
@@ -125,7 +125,7 @@ async function markAsSent(id) {
         const alert = allAlerts.find(a => a.id === id);
         if (alert) alert.sent = true;
         renderAlerts();
-        showToast('Alerta marcada como enviada', 'success');
+        showToast('Alerta marcada como <strong>gestionada</strong>', 'success');
     } catch (err) {
         showInfoModal('Error al marcar la alerta como enviada', true);
     }
@@ -137,7 +137,7 @@ async function markAsPending(id) {
         const alert = allAlerts.find(a => a.id === id);
         if (alert) alert.sent = false;
         renderAlerts();
-        showToast('Alerta marcada como pendiente', 'warning');
+        showToast('Alerta marcada como <strong>sin gestionar</strong>', 'warning');
     } catch (err) {
         showInfoModal('Error al marcar la alerta como pendiente', true);
     }
