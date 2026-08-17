@@ -129,7 +129,7 @@ def get_device_status(db: Session = Depends(get_db)):
 
 @router.patch("/{alert_id}/sent", response_model=schemas.AlertOut)
 def mark_alert_sent(alert_id: int, db: Session = Depends(get_db)):
-    """Marca una alerta como enviada."""
+    """Marca una alerta como gestionada."""
     alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alerta no encontrada")
@@ -140,7 +140,7 @@ def mark_alert_sent(alert_id: int, db: Session = Depends(get_db)):
 
 @router.patch("/{alert_id}/pending", response_model=schemas.AlertOut)
 def mark_alert_pending(alert_id: int, db: Session = Depends(get_db)):
-    """Revierte una alerta ya marcada como enviada, devolviéndola a pendiente."""
+    """Revierte una alerta ya gestionada, devolviéndola a sin gestionar."""
     alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alerta no encontrada")
