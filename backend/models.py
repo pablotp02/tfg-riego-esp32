@@ -338,3 +338,16 @@ event.listen(
     "after_create",
     _sensor_readings_trigger.execute_if(dialect="postgresql")
 )
+
+# Trigger de protección para IRRIGATION_EVENTS
+_irrigation_events_trigger = DDL("""
+    CREATE TRIGGER irrigation_events_no_modify
+    BEFORE UPDATE OR DELETE ON irrigation_events
+    FOR EACH ROW EXECUTE FUNCTION prevent_modification();
+""")
+
+event.listen(
+    IrrigationEvent.__table__,
+    "after_create",
+    _irrigation_events_trigger.execute_if(dialect="postgresql")
+)
