@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, Boolean, String, Text, DateTime, SmallInteger, ForeignKey, Index, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, Integer, Float, Boolean, String, Text, DateTime, SmallInteger, ForeignKey, Index, CheckConstraint, UniqueConstraint, event, DDL
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -294,3 +294,32 @@ class NotificationSettings(Base):
     channel_telegram_enabled = Column(Boolean, nullable=False, default=False)
     channel_email_enabled    = Column(Boolean, nullable=False, default=False)
 
+# Trigger de protección: impide UPDATE/DELETE sobre los datos
+# operativos de SYSTEM_CYCLES, reforzando a nivel de base de datos
+# la política de solo-inserción ya aplicada por el backend
+_prevent_modification_trigger = DDL("""
+    CREATE OR REPLACE FUNCTION prevent_modification()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        RAISE EXCEPTION 'No se permite modificar ni eliminar registros de %%', TG_TABLE_NAME;
+    END;
+    $$ LANGUAGE plpgsql;
+""")
+
+event.listen(
+    Base.metadata,
+    "before_create",
+    _prevent_modification_trigger.execute_if(dialect="postgresql")
+)
+
+_system_cycles_trigger = DDL("""
+    CREATE TRIGGER system_cycles_no_modify
+    BEFORE UPDATE OR DELETE ON system_cycles
+    FOR EACH ROW EXECUTE FUNCTION prevent_modification();
+""")
+
+event.listen(
+    SystemCycle.__table__,
+    "after_create",
+    _system_cycles_trigger.execute_if(dialect="postgresql")
+)
