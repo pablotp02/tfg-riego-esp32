@@ -294,9 +294,9 @@ class NotificationSettings(Base):
     channel_telegram_enabled = Column(Boolean, nullable=False, default=False)
     channel_email_enabled    = Column(Boolean, nullable=False, default=False)
 
-# Trigger de protección: impide UPDATE/DELETE sobre los datos
-# operativos de SYSTEM_CYCLES, reforzando a nivel de base de datos
-# la política de solo-inserción ya aplicada por el backend
+# Función compartida por todos los triggers de protección: impide
+# UPDATE/DELETE sobre las tablas de datos operativos e históricos,
+# reforzando a nivel de base de datos la política de solo-inserción
 _prevent_modification_trigger = DDL("""
     CREATE OR REPLACE FUNCTION prevent_modification()
     RETURNS TRIGGER AS $$
@@ -312,6 +312,7 @@ event.listen(
     _prevent_modification_trigger.execute_if(dialect="postgresql")
 )
 
+# Trigger de protección para SYSTEM_CYCLES
 _system_cycles_trigger = DDL("""
     CREATE TRIGGER system_cycles_no_modify
     BEFORE UPDATE OR DELETE ON system_cycles
@@ -322,4 +323,18 @@ event.listen(
     SystemCycle.__table__,
     "after_create",
     _system_cycles_trigger.execute_if(dialect="postgresql")
+)
+
+# Trigger de protección: impide UPDATE/DELETE sobre los datos
+# operativos de SENSOR_READINGS
+_sensor_readings_trigger = DDL("""
+    CREATE TRIGGER sensor_readings_no_modify
+    BEFORE UPDATE OR DELETE ON sensor_readings
+    FOR EACH ROW EXECUTE FUNCTION prevent_modification();
+""")
+
+event.listen(
+    SensorReading.__table__,
+    "after_create",
+    _sensor_readings_trigger.execute_if(dialect="postgresql")
 )
