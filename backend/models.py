@@ -390,3 +390,16 @@ event.listen(
     "after_create",
     _notification_deliveries_trigger.execute_if(dialect="postgresql")
 )
+
+# Trigger de protección para DEVICE_SYNC_LOG
+_device_sync_log_trigger = DDL("""
+    CREATE TRIGGER device_sync_log_no_modify
+    BEFORE UPDATE OR DELETE ON device_sync_log
+    FOR EACH ROW EXECUTE FUNCTION prevent_modification();
+""")
+
+event.listen(
+    DeviceSyncLog.__table__,
+    "after_create",
+    _device_sync_log_trigger.execute_if(dialect="postgresql")
+)
