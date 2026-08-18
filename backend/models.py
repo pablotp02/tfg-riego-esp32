@@ -364,3 +364,16 @@ event.listen(
     "after_create",
     _power_states_trigger.execute_if(dialect="postgresql")
 )
+
+# Trigger de protección para SYSTEM_ERRORS
+_system_errors_trigger = DDL("""
+    CREATE TRIGGER system_errors_no_modify
+    BEFORE UPDATE OR DELETE ON system_errors
+    FOR EACH ROW EXECUTE FUNCTION prevent_modification();
+""")
+
+event.listen(
+    SystemError.__table__,
+    "after_create",
+    _system_errors_trigger.execute_if(dialect="postgresql")
+)
