@@ -377,3 +377,16 @@ event.listen(
     "after_create",
     _system_errors_trigger.execute_if(dialect="postgresql")
 )
+
+# Trigger de protección para NOTIFICATION_DELIVERY
+_notification_deliveries_trigger = DDL("""
+    CREATE TRIGGER notification_deliveries_no_modify
+    BEFORE UPDATE OR DELETE ON notification_deliveries
+    FOR EACH ROW EXECUTE FUNCTION prevent_modification();
+""")
+
+event.listen(
+    NotificationDelivery.__table__,
+    "after_create",
+    _notification_deliveries_trigger.execute_if(dialect="postgresql")
+)
