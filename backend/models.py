@@ -351,3 +351,16 @@ event.listen(
     "after_create",
     _irrigation_events_trigger.execute_if(dialect="postgresql")
 )
+
+# Trigger de protección para POWER_STATES
+_power_states_trigger = DDL("""
+    CREATE TRIGGER power_states_no_modify
+    BEFORE UPDATE OR DELETE ON power_states
+    FOR EACH ROW EXECUTE FUNCTION prevent_modification();
+""")
+
+event.listen(
+    PowerState.__table__,
+    "after_create",
+    _power_states_trigger.execute_if(dialect="postgresql")
+)
