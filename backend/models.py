@@ -312,6 +312,19 @@ event.listen(
     _prevent_modification_trigger.execute_if(dialect="postgresql")
 )
 
+# Trigger de protección para DEVICE_CONFIG
+_device_config_trigger = DDL("""
+    CREATE TRIGGER device_config_no_modify
+    BEFORE UPDATE OR DELETE ON device_config
+    FOR EACH ROW EXECUTE FUNCTION prevent_modification();
+""")
+
+event.listen(
+    DeviceConfig.__table__,
+    "after_create",
+    _device_config_trigger.execute_if(dialect="postgresql")
+)
+
 # Trigger de protección para SYSTEM_CYCLES
 _system_cycles_trigger = DDL("""
     CREATE TRIGGER system_cycles_no_modify
