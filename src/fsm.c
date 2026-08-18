@@ -135,7 +135,10 @@ void fsm_init(system_ctx_t *ctx)
         .power_mode = POWER_MODE_NORMAL,
 
         // Sin sincronización todavía en este arranque
-        .device_cfg_synced = false
+        .device_cfg_synced = false,
+
+        // Sin ninguna decisión de riego tomada todavía en este arranque
+        .irrigate_reason = NULL
     };
 
     // Configuración por defecto como último recurso. Si hay algo válido
@@ -362,6 +365,8 @@ void fsm_step(system_ctx_t *ctx)
                     (unsigned long)ctx->device_cfg.irrigation_cooldown_cycles,
                     ctx->irrigate_request ? "SI" : "NO",
                     reason ? reason : "sin motivo");
+
+        ctx->irrigate_reason = reason;
 
         ctx->state = ctx->irrigate_request ? STATE_IRRIGATE : STATE_LOG;
         break;

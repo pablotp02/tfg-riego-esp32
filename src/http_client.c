@@ -25,10 +25,10 @@ static int build_json_payload(const system_ctx_t *ctx, char *buf, size_t buf_siz
     float ph = have_soil_extra ? sensors_get_last_ph() : 0.0f;
     float ec = have_soil_extra ? sensors_get_last_ec() : 0.0f;
 
-    // Motivo del riego/bloqueo - lo dejamos genérico ya que la FSM
-    // no expone directamente el "reason" fuera de los logs
-    const char *irrigation_reason = ctx->irrigate_request ?
-            "suelo por debajo del umbral" : "sin riego";
+    // Motivo detallado de la decisión de riego, calculado en
+    // decide_irrigation() y conservado en el contexto
+    const char *irrigation_reason = ctx->irrigate_reason ?
+            ctx->irrigate_reason : "sin motivo registrado";
 
     int written = snprintf(buf, buf_size,
         "{"

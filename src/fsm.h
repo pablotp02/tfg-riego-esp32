@@ -55,6 +55,12 @@ typedef struct {
     // este ciclo; false si se está usando el valor guardado en RTC o
     // los valores por defecto (sin sincronización disponible)
     bool device_cfg_synced;
+
+    // Motivo detallado de la última decisión de riego (histéresis,
+    // cooldown, modo crítico, etc.), calculado en decide_irrigation()
+    // y conservado aquí para poder incluirlo en el payload enviado
+    // al backend
+    const char *irrigate_reason;
 } system_ctx_t;
 
 // Inicializa el contexto
