@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from telegram_utils import send_telegram_message
 from email_utils import send_email
 from typing import List
@@ -138,7 +139,14 @@ def create_recipient(payload: schemas.NotificationRecipientCreate, db: Session =
 
     new_recipient = models.NotificationRecipient(**payload.model_dump())
     db.add(new_recipient)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Ya existe un destinatario registrado con ese chat ID de Telegram o ese email"
+        )
     db.refresh(new_recipient)
     return new_recipient
 
@@ -156,7 +164,14 @@ def update_recipient(recipient_id: int, payload: schemas.NotificationRecipientCr
     for field, value in payload.model_dump().items():
         setattr(recipient, field, value)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Ya existe un destinatario registrado con ese chat ID de Telegram o ese email"
+        )
     db.refresh(recipient)
     return recipient
 
