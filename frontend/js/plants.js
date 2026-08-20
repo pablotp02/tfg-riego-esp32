@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000';
+const API_URL = `http://${window.location.hostname}:8000`;
 
 const activeContainer = document.getElementById('active-plant-container');
 const listContainer   = document.getElementById('plants-list-container');

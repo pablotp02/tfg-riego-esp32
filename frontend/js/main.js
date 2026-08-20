@@ -1,5 +1,5 @@
 // ─── Configuración ───────────────────────────────────────────
-const API_URL = 'http://localhost:8000';
+const API_URL = `http://${window.location.hostname}:8000`;
 const REFRESH_INTERVAL = 10000; // actualizar cada 10 segundos
 
 // ─── Referencias DOM ─────────────────────────────────────────

@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000';
+const API_URL = `http://${window.location.hostname}:8000`;
 const PAGE_SIZE = 10;
 
 const tableBody   = document.getElementById('config-history-table');
