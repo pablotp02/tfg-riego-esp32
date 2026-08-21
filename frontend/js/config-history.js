@@ -43,7 +43,7 @@ async function loadConfigHistory() {
         const data = await res.json();
 
         if (isFirstPage && data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8">No hay ninguna configuración registrada todavía</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9">No hay ninguna configuración registrada todavía</td></tr>';
             btnLoadMore.style.display = 'none';
             return;
         }
@@ -60,10 +60,11 @@ async function loadConfigHistory() {
                 : 'Nunca sincronizada';
             return `
                 <tr ${isCurrent ? 'style="background-color: #e8f5ee;"' : ''}>
-                    <td>${formatDate(cfg.updated_at)} ${isCurrent ? '<span class="badge-si" style="margin-left:8px;">Actual</span>' : ''}</td>
+                    <td style="white-space: nowrap;">${formatDate(cfg.updated_at)} ${isCurrent ? '<span class="badge-si" style="margin-left:8px;">Actual</span>' : ''}</td>
                     <td>${cfg.soil_start_irrigation_pct}%</td>
                     <td>${cfg.soil_stop_irrigation_pct}%</td>
                     <td>${cfg.soil_min_temp_c}ºC</td>
+                    <td>${cfg.soil_freeze_risk_temp_c}ºC</td>
                     <td>${cfg.irrigation_cooldown_cycles} ciclos</td>
                     <td>${(cfg.measure_period_ms / 1000)}s</td>
                     <td>${(cfg.irrigate_time_ms / 1000)}s</td>
@@ -81,7 +82,7 @@ async function loadConfigHistory() {
             noMoreHistory.style.display = 'block';
         }
     } catch (err) {
-        tableBody.innerHTML = '<tr><td colspan="8">Error al cargar el historial</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9">Error al cargar el historial</td></tr>';
     }
 }
 
