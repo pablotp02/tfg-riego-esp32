@@ -17,6 +17,7 @@ typedef struct
     uint32_t cycles_since_irrigated; // cooldown de riego
     uint32_t sensor_error_count;
     uint32_t sensor_read_error_count;
+    bool pending_send; // envío pendiente tras un fallo de conexión/HTTP
     bool boot_initialized;
 
     float battery_level_pct;
@@ -36,6 +37,7 @@ RTC_DATA_ATTR static rtc_persisted_state_t s_rtc_state =
     .cycles_since_irrigated = IRRIGATION_COOLDOWN_CYCLES, // arranca listo para regar
     .sensor_error_count = 0,
     .sensor_read_error_count = 0,
+    .pending_send = false,
     .boot_initialized = false
 };
 
@@ -48,6 +50,7 @@ static void rtc_state_reset_defaults(void)
     s_rtc_state.cycles_since_irrigated = IRRIGATION_COOLDOWN_CYCLES;
     s_rtc_state.sensor_error_count = 0;
     s_rtc_state.sensor_read_error_count = 0;
+    s_rtc_state.pending_send = false;
 
     s_rtc_state.battery_level_pct = 100.0f;
     s_rtc_state.power_mode = POWER_MODE_NORMAL;
@@ -85,6 +88,7 @@ void power_restore_ctx_from_rtc(system_ctx_t *ctx)
     ctx->cycles_since_irrigated   = s_rtc_state.cycles_since_irrigated;
     ctx->sensor_error_count       = s_rtc_state.sensor_error_count;
     ctx->sensor_read_error_count  = s_rtc_state.sensor_read_error_count;
+    ctx->pending_send             = s_rtc_state.pending_send;
     ctx->battery_level_pct        = s_rtc_state.battery_level_pct;
     ctx->power_mode               = s_rtc_state.power_mode;
 
@@ -120,6 +124,7 @@ void power_store_ctx_to_rtc(const system_ctx_t *ctx)
     s_rtc_state.cycles_since_irrigated  = ctx->cycles_since_irrigated;
     s_rtc_state.sensor_error_count      = ctx->sensor_error_count;
     s_rtc_state.sensor_read_error_count = ctx->sensor_read_error_count;
+    s_rtc_state.pending_send            = ctx->pending_send;
     s_rtc_state.boot_initialized        = true;
     s_rtc_state.battery_level_pct       = ctx->battery_level_pct;
     s_rtc_state.power_mode              = ctx->power_mode;

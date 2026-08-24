@@ -426,6 +426,8 @@ void fsm_step(system_ctx_t *ctx)
         // Conectar WiFi y enviar el payload al backend.
         // Si falla la conexión o el envío, el sistema continúa sin
         // bloquearse - se reintentará en el siguiente ciclo con pending_send.
+        bool send_success = false;
+
         esp_err_t wifi_err = wifi_connect();
         if (wifi_err == ESP_OK)
         {
@@ -433,6 +435,7 @@ void fsm_step(system_ctx_t *ctx)
             if (send_err == ESP_OK)
             {
                 ESP_LOGI(TAG, "[SEND] Datos enviados correctamente al backend");
+                send_success = true;
             }
             else
             {
@@ -446,7 +449,10 @@ void fsm_step(system_ctx_t *ctx)
         }
 
         vTaskDelay(pdMS_TO_TICKS(300));
-        ctx->pending_send = false;
+        // Solo se marca como enviado si el envío tuvo éxito. Si falló,
+        // pending_send permanece en true para reintentarlo en el
+        // siguiente ciclo, tal como indican los mensajes de log.
+        ctx->pending_send = !send_success;
         ctx->state = STATE_SLEEP;
         break;
     }
