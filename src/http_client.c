@@ -19,8 +19,6 @@ static const char *TAG = "HTTP_CLIENT";
 // ─── Construcción del JSON del payload ────────────────────────
 static int build_json_payload(const system_ctx_t *ctx, char *buf, size_t buf_size)
 {
-    const system_config_t *cfg = config_get();
-
     bool have_soil_extra = sensors_have_sen0604_data();
     float ph = have_soil_extra ? sensors_get_last_ph() : 0.0f;
     float ec = have_soil_extra ? sensors_get_last_ec() : 0.0f;
@@ -47,7 +45,7 @@ static int build_json_payload(const system_ctx_t *ctx, char *buf, size_t buf_siz
         "\"sleep_ms\":%lu,"
         "\"wakeup_cause\":\"%s\","
         "\"cooldown_current\":%lu,"
-        "\"cooldown_required\":%u"
+        "\"cooldown_required\":%lu"
         "}",
         (unsigned long)ctx->cycle_count,
         ctx->last.soil_moisture_pct,
@@ -57,14 +55,14 @@ static int build_json_payload(const system_ctx_t *ctx, char *buf, size_t buf_siz
         sensors_last_rs485_read_ok() ? "true" : "false",
         ctx->sensor_valid ? "true" : "false",
         ctx->irrigate_request ? "true" : "false",
-        ctx->irrigate_request ? (unsigned long)cfg->irrigate_time_ms : 0UL,
+        ctx->irrigate_request ? (unsigned long)ctx->device_cfg.irrigate_time_ms : 0UL,
         irrigation_reason,
         ctx->battery_level_pct,
         (int)ctx->power_mode,
-        (unsigned long)cfg->measure_period_ms,
+        (unsigned long)ctx->device_cfg.measure_period_ms,
         power_get_wakeup_cause_str(),
         (unsigned long)ctx->cycles_since_irrigated,
-        IRRIGATION_COOLDOWN_CYCLES
+        (unsigned long)ctx->device_cfg.irrigation_cooldown_cycles
     );
 
     if (written < 0 || (size_t)written >= buf_size)
