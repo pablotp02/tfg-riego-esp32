@@ -55,7 +55,6 @@ typedef struct {
     uint32_t sensor_error_count;
     uint32_t sensor_read_error_count;
 
-    uint32_t cycles_since_measure;
     bool pending_send;
     pending_cycle_data_t pending_cycle; // datos del ciclo fallido, para reintentar
 

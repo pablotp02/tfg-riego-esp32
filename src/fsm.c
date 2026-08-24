@@ -123,7 +123,6 @@ void fsm_init(system_ctx_t *ctx)
         .state = STATE_INIT,
         .irrigate_request = false,
         .cycle_count = 0,
-        .cycles_since_measure = 0,
         .pending_send = false,
         .sensor_valid = true,
         .error_reason = NULL,
@@ -209,10 +208,9 @@ void fsm_step(system_ctx_t *ctx)
         }
 
         ESP_LOGI(TAG,
-                "[CFG] period=%lums irrig=%lums measure_n=%lu soil_start=%.1f%% soil_stop=%.1f%% min_temp=%.1fC cooldown=%lu (synced=%s)",
+                "[CFG] period=%lums irrig=%lums soil_start=%.1f%% soil_stop=%.1f%% min_temp=%.1fC cooldown=%lu (synced=%s)",
                 (unsigned long)ctx->device_cfg.measure_period_ms,
                 (unsigned long)ctx->device_cfg.irrigate_time_ms,
-                (unsigned long)cfg->measure_every_n_cycles,
                 ctx->device_cfg.soil_start_irrigation_pct,
                 ctx->device_cfg.soil_stop_irrigation_pct,
                 ctx->device_cfg.soil_min_temp_c,
@@ -231,8 +229,6 @@ void fsm_step(system_ctx_t *ctx)
 
     case STATE_SCHEDULE:
     {
-        ctx->cycles_since_measure++;
-
         // En modo crítico se descarta cualquier envío pendiente, para
         // priorizar la autonomía energética del sistema
         if (ctx->power_mode == POWER_MODE_CRITICAL)
@@ -244,18 +240,12 @@ void fsm_step(system_ctx_t *ctx)
         {
             ctx->state = STATE_SEND_PENDING;
         }
-        else if (ctx->cycles_since_measure >= cfg->measure_every_n_cycles)
-        {
-            ctx->cycles_since_measure = 0;
-            ctx->state = STATE_MEASURE;
-        }
         else
         {
-            ctx->state = STATE_SLEEP;
+            ctx->state = STATE_MEASURE;
         }
 
-        ESP_LOGI(TAG, "[SCHEDULE] ciclos: desde_measure=%lu, pending_send=%s | mode=%s",
-                (unsigned long)ctx->cycles_since_measure,
+        ESP_LOGI(TAG, "[SCHEDULE] pending_send=%s | mode=%s",
                 ctx->pending_send ? "SI" : "NO",
                 power_mode_to_str(ctx->power_mode));
 

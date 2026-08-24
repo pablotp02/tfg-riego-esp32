@@ -44,9 +44,6 @@ typedef struct {
     uint32_t measure_period_ms;     // tiempo entre ciclos (demo). Luego: horas
     uint32_t irrigate_time_ms;      // tiempo de riego
 
-    // Planificador por ciclos (demo)
-    uint32_t measure_every_n_cycles; // cada cuántos ciclos medir
-
     // Umbrales
     float soil_start_irrigation_pct; // por debajo de este valor, pedir riego
     float soil_stop_irrigation_pct;  // por encima de este valor, dejar de regar
