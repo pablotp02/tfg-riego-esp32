@@ -13,7 +13,6 @@ static const char *TAG = "POWER";
 typedef struct
 {
     uint32_t cycle_count;
-    uint32_t cycles_since_send;
     uint32_t cycles_since_irrigated; // cooldown de riego
     uint32_t sensor_error_count;
     uint32_t sensor_read_error_count;
@@ -33,7 +32,6 @@ typedef struct
 RTC_DATA_ATTR static rtc_persisted_state_t s_rtc_state =
 {
     .cycle_count = 0,
-    .cycles_since_send = 0,
     .cycles_since_irrigated = IRRIGATION_COOLDOWN_CYCLES, // arranca listo para regar
     .sensor_error_count = 0,
     .sensor_read_error_count = 0,
@@ -46,7 +44,6 @@ static void rtc_state_reset_defaults(void); // forward declaration
 static void rtc_state_reset_defaults(void)
 {
     s_rtc_state.cycle_count = 0;
-    s_rtc_state.cycles_since_send = 0;
     s_rtc_state.cycles_since_irrigated = IRRIGATION_COOLDOWN_CYCLES;
     s_rtc_state.sensor_error_count = 0;
     s_rtc_state.sensor_read_error_count = 0;
@@ -84,7 +81,6 @@ void power_restore_ctx_from_rtc(system_ctx_t *ctx)
     }
 
     ctx->cycle_count              = s_rtc_state.cycle_count;
-    ctx->cycles_since_send        = s_rtc_state.cycles_since_send;
     ctx->cycles_since_irrigated   = s_rtc_state.cycles_since_irrigated;
     ctx->sensor_error_count       = s_rtc_state.sensor_error_count;
     ctx->sensor_read_error_count  = s_rtc_state.sensor_read_error_count;
@@ -100,9 +96,8 @@ void power_restore_ctx_from_rtc(system_ctx_t *ctx)
     }
 
     ESP_LOGI(TAG,
-            "Contexto restaurado desde RTC -> cycle=%lu send_since=%lu irrigated_since=%lu err_val=%lu err_read=%lu battery=%.1f%% mode=%d cfg_valid=%s",
+            "Contexto restaurado desde RTC -> cycle=%lu irrigated_since=%lu err_val=%lu err_read=%lu battery=%.1f%% mode=%d cfg_valid=%s",
             (unsigned long)ctx->cycle_count,
-            (unsigned long)ctx->cycles_since_send,
             (unsigned long)ctx->cycles_since_irrigated,
             (unsigned long)ctx->sensor_error_count,
             (unsigned long)ctx->sensor_read_error_count,
@@ -120,7 +115,6 @@ void power_store_ctx_to_rtc(const system_ctx_t *ctx)
     }
 
     s_rtc_state.cycle_count             = ctx->cycle_count;
-    s_rtc_state.cycles_since_send       = ctx->cycles_since_send;
     s_rtc_state.cycles_since_irrigated  = ctx->cycles_since_irrigated;
     s_rtc_state.sensor_error_count      = ctx->sensor_error_count;
     s_rtc_state.sensor_read_error_count = ctx->sensor_read_error_count;
@@ -139,9 +133,8 @@ void power_store_ctx_to_rtc(const system_ctx_t *ctx)
     }
 
     ESP_LOGI(TAG,
-            "Contexto guardado en RTC -> cycle=%lu send_since=%lu irrigated_since=%lu err_val=%lu err_read=%lu battery=%.1f%% mode=%d cfg_synced=%s",
+            "Contexto guardado en RTC -> cycle=%lu irrigated_since=%lu err_val=%lu err_read=%lu battery=%.1f%% mode=%d cfg_synced=%s",
             (unsigned long)s_rtc_state.cycle_count,
-            (unsigned long)s_rtc_state.cycles_since_send,
             (unsigned long)s_rtc_state.cycles_since_irrigated,
             (unsigned long)s_rtc_state.sensor_error_count,
             (unsigned long)s_rtc_state.sensor_read_error_count,

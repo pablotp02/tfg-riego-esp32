@@ -8,7 +8,6 @@ static const system_config_t g_cfg = {
     .measure_period_ms          = 5000,  // 5 s demo (luego: horas)
     .irrigate_time_ms           = 2000,  // 2 s demo
     .measure_every_n_cycles     = 1,
-    .send_every_n_cycles        = 3,
     .soil_start_irrigation_pct  = 40.0f,
     .soil_stop_irrigation_pct   = 50.0f
 };

@@ -46,7 +46,6 @@ typedef struct {
 
     // Planificador por ciclos (demo)
     uint32_t measure_every_n_cycles; // cada cuántos ciclos medir
-    uint32_t send_every_n_cycles;    // cada cuántos ciclos enviar
 
     // Umbrales
     float soil_start_irrigation_pct; // por debajo de este valor, pedir riego
