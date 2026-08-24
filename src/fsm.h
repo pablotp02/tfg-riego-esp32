@@ -8,6 +8,7 @@
 typedef enum {
     STATE_INIT = 0,
     STATE_SCHEDULE,
+    STATE_SEND_PENDING,
     STATE_MEASURE,
     STATE_VALIDATE,
     STATE_DECIDE,
@@ -24,6 +25,25 @@ typedef struct {
     float soil_temp_c;        // ºC
 } sensor_data_t;
 
+// Datos mínimos necesarios para reconstruir el payload de un ciclo
+// cuyo envío al backend falló, y que debe reintentarse al principio
+// del siguiente ciclo, antes de sobrescribirse con la nueva medición
+typedef struct {
+    uint32_t cycle_number;
+    sensor_data_t last;
+    bool have_soil_extra;
+    float ph;
+    float ec;
+    bool irrigate_request;
+    uint32_t duration_ms;
+    const char *irrigate_reason;
+    float battery_level_pct;
+    power_mode_t power_mode;
+    uint32_t sleep_ms;
+    uint32_t cycles_since_irrigated;
+    uint32_t irrigation_cooldown_cycles;
+} pending_cycle_data_t;
+
 typedef struct {
     system_state_t state;
     sensor_data_t last;
@@ -37,6 +57,7 @@ typedef struct {
 
     uint32_t cycles_since_measure;
     bool pending_send;
+    pending_cycle_data_t pending_cycle; // datos del ciclo fallido, para reintentar
 
     // Cooldown riego: 
     // Cuenta los ciclos transcurridos desde el último riego

@@ -1,5 +1,6 @@
 #include "power.h"
 #include "config.h"
+#include "fsm.h"
 
 #include "esp_sleep.h"
 #include "esp_log.h"
@@ -17,6 +18,7 @@ typedef struct
     uint32_t sensor_error_count;
     uint32_t sensor_read_error_count;
     bool pending_send; // envío pendiente tras un fallo de conexión/HTTP
+    pending_cycle_data_t pending_cycle; // datos del ciclo fallido, para reintentar
     bool boot_initialized;
 
     float battery_level_pct;
@@ -85,6 +87,7 @@ void power_restore_ctx_from_rtc(system_ctx_t *ctx)
     ctx->sensor_error_count       = s_rtc_state.sensor_error_count;
     ctx->sensor_read_error_count  = s_rtc_state.sensor_read_error_count;
     ctx->pending_send             = s_rtc_state.pending_send;
+    ctx->pending_cycle            = s_rtc_state.pending_cycle;
     ctx->battery_level_pct        = s_rtc_state.battery_level_pct;
     ctx->power_mode               = s_rtc_state.power_mode;
 
@@ -119,6 +122,7 @@ void power_store_ctx_to_rtc(const system_ctx_t *ctx)
     s_rtc_state.sensor_error_count      = ctx->sensor_error_count;
     s_rtc_state.sensor_read_error_count = ctx->sensor_read_error_count;
     s_rtc_state.pending_send            = ctx->pending_send;
+    s_rtc_state.pending_cycle           = ctx->pending_cycle;
     s_rtc_state.boot_initialized        = true;
     s_rtc_state.battery_level_pct       = ctx->battery_level_pct;
     s_rtc_state.power_mode              = ctx->power_mode;

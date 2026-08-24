@@ -240,14 +240,14 @@ void fsm_step(system_ctx_t *ctx)
             ctx->pending_send = false;
         }
 
-        if (ctx->cycles_since_measure >= cfg->measure_every_n_cycles)
+        if (ctx->pending_send)
+        {
+            ctx->state = STATE_SEND_PENDING;
+        }
+        else if (ctx->cycles_since_measure >= cfg->measure_every_n_cycles)
         {
             ctx->cycles_since_measure = 0;
             ctx->state = STATE_MEASURE;
-        }
-        else if (ctx->pending_send)
-        {
-            ctx->state = STATE_SEND;
         }
         else
         {
@@ -259,6 +259,41 @@ void fsm_step(system_ctx_t *ctx)
                 ctx->pending_send ? "SI" : "NO",
                 power_mode_to_str(ctx->power_mode));
 
+        break;
+    }
+
+        case STATE_SEND_PENDING:
+    {
+        ESP_LOGI(TAG, "[SEND_PENDING] Reintentando envío del ciclo %lu (fallido anteriormente)",
+                (unsigned long)ctx->pending_cycle.cycle_number);
+
+        esp_err_t wifi_err = wifi_connect();
+        if (wifi_err == ESP_OK)
+        {
+            esp_err_t send_err = http_send_pending_cycle(&ctx->pending_cycle);
+            if (send_err == ESP_OK)
+            {
+                ESP_LOGI(TAG, "[SEND_PENDING] Ciclo pendiente enviado correctamente");
+            }
+            else
+            {
+                ESP_LOGW(TAG, "[SEND_PENDING] Fallo al reenviar el ciclo pendiente, se descarta");
+            }
+            wifi_disconnect();
+        }
+        else
+        {
+            ESP_LOGW(TAG, "[SEND_PENDING] Sin conexión WiFi, se descarta el ciclo pendiente");
+        }
+
+        // Tanto si el reintento tiene éxito como si vuelve a fallar, se
+        // descarta el dato pendiente: si ha fallado dos veces seguidas,
+        // es muy probable que un tercer intento en este mismo ciclo
+        // también fallara, así que no se insiste más con este dato en
+        // concreto.
+        ctx->pending_send = false;
+
+        ctx->state = STATE_MEASURE;
         break;
     }
 
@@ -439,8 +474,25 @@ void fsm_step(system_ctx_t *ctx)
         vTaskDelay(pdMS_TO_TICKS(300));
         // Solo se marca como enviado si el envío tuvo éxito. Si falló,
         // pending_send permanece en true para reintentarlo en el
-        // siguiente ciclo, tal como indican los mensajes de log.
+        // siguiente ciclo, guardando los datos necesarios para
+        // reconstruir el payload en STATE_SEND_PENDING.
         ctx->pending_send = !send_success;
+        if (!send_success)
+        {
+            ctx->pending_cycle.cycle_number = ctx->cycle_count;
+            ctx->pending_cycle.last = ctx->last;
+            ctx->pending_cycle.have_soil_extra = have_soil_extra;
+            ctx->pending_cycle.ph = ph;
+            ctx->pending_cycle.ec = ec;
+            ctx->pending_cycle.irrigate_request = ctx->irrigate_request;
+            ctx->pending_cycle.duration_ms = ctx->irrigate_request ? ctx->device_cfg.irrigate_time_ms : 0;
+            ctx->pending_cycle.irrigate_reason = ctx->irrigate_reason;
+            ctx->pending_cycle.battery_level_pct = ctx->battery_level_pct;
+            ctx->pending_cycle.power_mode = ctx->power_mode;
+            ctx->pending_cycle.sleep_ms = ctx->device_cfg.measure_period_ms;
+            ctx->pending_cycle.cycles_since_irrigated = ctx->cycles_since_irrigated;
+            ctx->pending_cycle.irrigation_cooldown_cycles = ctx->device_cfg.irrigation_cooldown_cycles;
+        }
         ctx->state = STATE_SLEEP;
         break;
     }
