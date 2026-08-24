@@ -525,6 +525,15 @@ footer {
     border-radius: 6px;
     font-size: 0.9rem;
 }
+
+.time-input-group {
+    display: flex;
+    gap: 8px;
+}
+.time-input-group input {
+    flex: 1;
+    min-width: 0;
+}
 .modal-actions {
     display: flex;
     justify-content: flex-end;

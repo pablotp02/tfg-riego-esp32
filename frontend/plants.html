@@ -102,11 +102,17 @@
                 <label>Cooldown de riego (ciclos)</label>
                 <input type="number" step="1" min="0" max="5" id="f-cooldown" required>
 
-                <label>Intervalo entre mediciones (s)</label>
-                <input type="number" step="1" min="1" id="f-measure" required>
+                <label>Intervalo entre mediciones (horas / minutos)</label>
+                <div class="time-input-group">
+                    <input type="number" step="1" min="0" id="f-measure-hours" placeholder="Horas">
+                    <input type="number" step="1" min="0" max="59" id="f-measure-minutes" placeholder="Minutos">
+                </div>
 
-                <label>Duración de riego (s)</label>
-                <input type="number" step="1" min="1" id="f-irrigate" required>
+                <label>Duración de riego (minutos / segundos)</label>
+                <div class="time-input-group">
+                    <input type="number" step="1" min="0" id="f-irrigate-minutes" placeholder="Minutos">
+                    <input type="number" step="1" min="0" max="59" id="f-irrigate-seconds" placeholder="Segundos">
+                </div>
 
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="modal-cancel">Cancelar</button>

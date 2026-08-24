@@ -180,6 +180,30 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Convierte una duración en milisegundos a un texto legible en
+// horas y minutos (ej. "2h 30min", "45min", "3h")
+function formatDurationHM(ms) {
+    const totalMinutes = Math.round(ms / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours === 0) return `${minutes}min`;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}min`;
+}
+
+// Convierte una duración en milisegundos a un texto legible en
+// minutos y segundos (ej. "2min 30s", "45s", "3min")
+function formatDurationMS(ms) {
+    const totalSeconds = Math.round(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes === 0) return `${seconds}s`;
+    if (seconds === 0) return `${minutes}min`;
+    return `${minutes}min ${seconds}s`;
+}
+
 function renderPlantCard(plant) {
     let badge;
     if (!plant.is_active) {
@@ -206,8 +230,8 @@ function renderPlantCard(plant) {
                 Temp. mínima: ${plant.soil_min_temp_c}ºC &middot;
                 Riesgo congelación: ${plant.soil_freeze_risk_temp_c}ºC<br>
                 Cooldown: ${plant.irrigation_cooldown_cycles} ciclos<br>
-                Intervalo medida: ${plant.measure_period_ms / 1000}s &middot;
-                Riego: ${plant.irrigate_time_ms / 1000}s
+                Intervalo medida: ${formatDurationHM(plant.measure_period_ms)} &middot;
+                Riego: ${formatDurationMS(plant.irrigate_time_ms)}
             </div>
             <div class="plant-card-actions">
                 ${activateBtn}
@@ -298,8 +322,13 @@ function openModal(mode, plant = null) {
         document.getElementById('f-mintemp').value    = plant.soil_min_temp_c;
         document.getElementById('f-freezetemp').value = plant.soil_freeze_risk_temp_c;
         document.getElementById('f-cooldown').value   = plant.irrigation_cooldown_cycles;
-        document.getElementById('f-measure').value  = plant.measure_period_ms / 1000;
-        document.getElementById('f-irrigate').value = plant.irrigate_time_ms / 1000;
+        const measureTotalSeconds = plant.measure_period_ms / 1000;
+        document.getElementById('f-measure-hours').value   = Math.floor(measureTotalSeconds / 3600);
+        document.getElementById('f-measure-minutes').value = Math.floor((measureTotalSeconds % 3600) / 60);
+
+        const irrigateTotalSeconds = plant.irrigate_time_ms / 1000;
+        document.getElementById('f-irrigate-minutes').value = Math.floor(irrigateTotalSeconds / 60);
+        document.getElementById('f-irrigate-seconds').value = Math.floor(irrigateTotalSeconds % 60);
 
         if (plant.id === currentActiveId) {
             modalWarning.classList.remove('hidden');
@@ -326,8 +355,14 @@ plantForm.addEventListener('submit', async (e) => {
     const start    = parseFloat(document.getElementById('f-start').value);
     const stop     = parseFloat(document.getElementById('f-stop').value);
     const cooldown = parseInt(document.getElementById('f-cooldown').value);
-    const measure  = parseInt(document.getElementById('f-measure').value);
-    const irrigate = parseInt(document.getElementById('f-irrigate').value);
+
+    const measureHours   = parseInt(document.getElementById('f-measure-hours').value) || 0;
+    const measureMinutes = parseInt(document.getElementById('f-measure-minutes').value) || 0;
+    const measureTotalSeconds = (measureHours * 3600) + (measureMinutes * 60);
+
+    const irrigateMinutes = parseInt(document.getElementById('f-irrigate-minutes').value) || 0;
+    const irrigateSeconds = parseInt(document.getElementById('f-irrigate-seconds').value) || 0;
+    const irrigateTotalSeconds = (irrigateMinutes * 60) + irrigateSeconds;
 
     const name = document.getElementById('f-name').value.trim();
     const nameRegex = /^[\p{L}\p{N} '_-]+$/u;
@@ -354,8 +389,12 @@ plantForm.addEventListener('submit', async (e) => {
         showInfoModal('El cooldown debe estar entre 0 y 5 ciclos, ya que cada ciclo puede representar varias horas de espera entre riegos.', true);
         return;
     }
-    if (measure < 1 || irrigate < 1) {
-        showInfoModal('El intervalo entre mediciones y la duración de riego deben ser de al menos 1 segundo.', true);
+    if (measureTotalSeconds < 1) {
+        showInfoModal('El intervalo entre mediciones debe ser de al menos 1 segundo.', true);
+        return;
+    }
+    if (irrigateTotalSeconds < 1) {
+        showInfoModal('La duración de riego debe ser de al menos 1 segundo.', true);
         return;
     }
 
@@ -366,8 +405,8 @@ plantForm.addEventListener('submit', async (e) => {
         soil_min_temp_c:            parseFloat(document.getElementById('f-mintemp').value),
         soil_freeze_risk_temp_c:    parseFloat(document.getElementById('f-freezetemp').value),
         irrigation_cooldown_cycles: cooldown,
-        measure_period_ms:          measure * 1000,
-        irrigate_time_ms:           irrigate * 1000,
+        measure_period_ms:          measureTotalSeconds * 1000,
+        irrigate_time_ms:           irrigateTotalSeconds * 1000,
     };
 
     try {
