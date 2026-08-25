@@ -6,16 +6,23 @@
 
 #include "esp_log.h"
 #include "esp_err.h"
+#include "esp_attr.h"
 
 static const char *TAG = "SENSORS";
 
-// Caché para SEN0604
-static bool s_have_sen0604 = false;
-static float s_last_soil_moist_pct = 0.0f;
-static float s_last_soil_temp_c = 0.0f;
-static float s_last_ph = 0.0f;
-static float s_last_ec = 0.0f;
+// Caché para SEN0604. Marcadas con RTC_DATA_ATTR para que persistan
+// entre ciclos de deep sleep, ya que este provoca un reinicio
+// completo del programa que borraría estas variables si fueran
+// estáticas normales, impidiendo el mecanismo de reutilización del
+// último valor válido en caso de fallo de lectura
+RTC_DATA_ATTR static bool s_have_sen0604 = false;
+RTC_DATA_ATTR static float s_last_soil_moist_pct = 0.0f;
+RTC_DATA_ATTR static float s_last_soil_temp_c    = 0.0f;
+RTC_DATA_ATTR static float s_last_ph = 0.0f;
+RTC_DATA_ATTR static float s_last_ec = 0.0f;
 
+// No se persiste en RTC, ya que se recalcula en cada ciclo,
+// tanto si la lectura tiene éxito como si falla
 static bool s_last_rs485_read_ok = true;
 
 sensor_data_t sensors_read(void)
