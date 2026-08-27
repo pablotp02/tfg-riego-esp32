@@ -48,26 +48,13 @@ void actuators_irrigate(uint32_t duration_ms)
         return;
     }
 
-    // Compilación condicional para habilitar/deshabilitar
-    // el control físico dle relé durante las pruebas
-    // Si ENABLE_REAL_RELAY = 0, el sistema simula riego sin activar hardware real
-    #if ENABLE_REAL_RELAY
-        ESP_LOGI(TAG, "[IRRIGATE] Activando relé (%lu ms)...", (unsigned long)duration_ms);
+    ESP_LOGI(TAG, "[IRRIGATE] Activando relé (%lu ms)...", (unsigned long)duration_ms);
 
-        gpio_set_level(RELAY_GPIO, 1); // ENCENDER relé
+    gpio_set_level(RELAY_GPIO, 1); // ENCENDER relé
 
-        vTaskDelay(pdMS_TO_TICKS(duration_ms));
+    vTaskDelay(pdMS_TO_TICKS(duration_ms));
 
-        gpio_set_level(RELAY_GPIO, 0); // APAGAR relé
+    gpio_set_level(RELAY_GPIO, 0); // APAGAR relé
 
-        ESP_LOGI(TAG, "[IRRIGATE] Relé desactivado"); 
-    #else
-        ESP_LOGW(TAG, 
-                "[IRRIGATE] Riego real deshabilitado por configuración (%lu ms)",
-                (unsigned long)duration_ms);
-        
-        vTaskDelay(pdMS_TO_TICKS(duration_ms));
-
-        ESP_LOGI(TAG, "[IRRIGATE] Simulación de riego finalizada");
-    #endif
+    ESP_LOGI(TAG, "[IRRIGATE] Relé desactivado");
 }

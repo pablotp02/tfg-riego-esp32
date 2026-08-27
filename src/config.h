@@ -7,7 +7,6 @@
 
 // PINES
 #define RELAY_GPIO GPIO_NUM_25 // se puede cambiar el numero más adelante
-#define ENABLE_REAL_RELAY 1
 
 // RS485 / MODBUS (SEN0604 + DFR0845)
 #define RS485_UART_PORT  (UART_NUM_2)
