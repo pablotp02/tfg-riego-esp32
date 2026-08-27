@@ -1,7 +1,5 @@
 #include "sensors.h"
 #include "config.h"
-#include "sensors_sim.h"
-#include "sensors_adc.h"
 #include "sen0604.h"
 
 #include "esp_log.h"
@@ -27,94 +25,59 @@ static bool s_last_rs485_read_ok = true;
 
 sensor_data_t sensors_read(void)
 {
-    const system_config_t *cfg = config_get();
     sensor_data_t d = {0};
 
-    // 1) Modo simulado
-    if (cfg->use_simulated_sensors) 
+    sen0604_data_t sen = {0};
+    esp_err_t rs_err = sen0604_read_all(RS485_SLAVE_ADDR, &sen);
+
+    if (rs_err == ESP_OK)
     {
-        return sensors_sim_read();
+        s_last_rs485_read_ok = true;
+
+        d.soil_moisture_pct = sen.soil_moisture_pct;
+        d.soil_temp_c = sen.soil_temp_c;
+
+        s_last_soil_moist_pct = sen.soil_moisture_pct;
+        s_last_soil_temp_c = sen.soil_temp_c;
+        s_last_ph = sen.ph;
+        s_last_ec = sen.ec_us_cm;
+        s_have_sen0604 = true;
+
+        ESP_LOGI(TAG, "[SEN0604] suelo=%.1f%% | pH=%.1f | EC=%.0f",
+                 sen.soil_moisture_pct, sen.ph, sen.ec_us_cm);
     }
-
-    // 2) Fuente de datos del suelo
-    if (cfg->use_rs485_sensor) 
+    else
     {
-        sen0604_data_t sen = {0};
-        esp_err_t rs_err = sen0604_read_all(RS485_SLAVE_ADDR, &sen);
+        s_last_rs485_read_ok = false;
 
-        if (rs_err == ESP_OK) 
+        ESP_LOGW(TAG, "[SEN0604] Fallo lectura (%s). Usando último valor %s",
+                 esp_err_to_name(rs_err), s_have_sen0604 ? "válido" : "inválido");
+
+        if (s_have_sen0604)
         {
-            s_last_rs485_read_ok = true;
-
-            d.soil_moisture_pct = sen.soil_moisture_pct;
-            d.soil_temp_c = sen.soil_temp_c;
-
-            s_last_soil_moist_pct = sen.soil_moisture_pct;
-            s_last_soil_temp_c = sen.soil_temp_c;
-            s_last_ph = sen.ph;
-            s_last_ec = sen.ec_us_cm;
-            s_have_sen0604 = true;
-
-            ESP_LOGI(TAG, "[SEN0604] suelo=%.1f%% | pH=%.1f | EC=%.0f",
-                     sen.soil_moisture_pct, sen.ph, sen.ec_us_cm);
-        } 
-        else 
-        {
-            s_last_rs485_read_ok = false;
-
-            ESP_LOGW(TAG, "[SEN0604] Fallo lectura (%s). Usando último valor %s",
-                     esp_err_to_name(rs_err), s_have_sen0604 ? "válido" : "inválido");
-
-
-            if (s_have_sen0604)
-            {
-                // Si ya hubo una lectura válida antes, reutilizamos el último valor bueno
-                d.soil_moisture_pct = s_last_soil_moist_pct;
-                d.soil_temp_c = s_last_soil_temp_c;
-            }
-            else 
-            {
-                // Si nunca hubo una lectura válida del sensor, devolvemos datos inválidos
-                // para que la FSM no tome decisiones de riego a ciegas
-                d.soil_moisture_pct = -1.0f;
-            }
+            // Si ya hubo una lectura válida antes, reutilizamos el último valor bueno
+            d.soil_moisture_pct = s_last_soil_moist_pct;
+            d.soil_temp_c = s_last_soil_temp_c;
         }
-    } 
-    else 
-    {
-        d = sensors_adc_read();
+        else
+        {
+            // Si nunca hubo una lectura válida del sensor, devolvemos datos inválidos
+            // para que la FSM no tome decisiones de riego a ciegas
+            d.soil_moisture_pct = -1.0f;
+        }
     }
 
-    return d; 
+    return d;
 }
 
 bool sensors_init(void)
 {
-    const system_config_t *cfg = config_get();
-
     ESP_LOGI(TAG, "Inicializando sensores...");
 
-    if (cfg->use_simulated_sensors)
+    if (sen0604_init() != ESP_OK)
     {
-        ESP_LOGI(TAG, "Modo simulación: no se inicializan sensores reales");
-        return true;
-    }
-
-    if (cfg->use_rs485_sensor) // Inicialización RS485
-    {
-        if (sen0604_init() != ESP_OK)
-        {
-            ESP_LOGE(TAG, "Fallo en sen0604_init()");
-            return false;
-        }
-    }
-    else // Inicialización ADC
-    {
-        if (!sensors_adc_init())
-        {
-            ESP_LOGE(TAG, "Fallo en sensors_adc_init()");
-            return false;
-        }
+        ESP_LOGE(TAG, "Fallo en sen0604_init()");
+        return false;
     }
 
     ESP_LOGI(TAG, "Inicialización de sensores completada");
