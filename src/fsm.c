@@ -1,5 +1,4 @@
 #include "fsm.h"
-#include "config.h"
 #include "device_config.h"
 
 #include "freertos/FreeRTOS.h"
@@ -33,11 +32,9 @@ static const char *TAG = "TFG_RIEGO";
 // Se comprueba disponibilidad de lectura, humedad de suelo y pH y EC
 static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out)
 {
-    const system_config_t *cfg = config_get();
-
-    // Si estamos usando RS485 pero aún no hay ninguna lectura válida del SEN0604,
-    // no debemos interpretar los valores de suelo como datos reales
-    if (cfg->use_rs485_sensor && !sensors_have_sen0604_data())
+    // Si aún no hay ninguna lectura válida del SEN0604, no debemos
+    // interpretar los valores de suelo como datos reales
+    if (!sensors_have_sen0604_data())
     {
         if (reason_out) *reason_out = "Lectura de suelo no disponible";
         return false;
@@ -152,8 +149,6 @@ void fsm_init(system_ctx_t *ctx)
 
 void fsm_step(system_ctx_t *ctx)
 {
-    const system_config_t *cfg = config_get();
-
     switch (ctx->state)
     {
     case STATE_INIT:
@@ -292,20 +287,13 @@ void fsm_step(system_ctx_t *ctx)
         ESP_LOGI(TAG, "[MEASURE] Tomando medidas...");
         ctx->last = sensors_read();
 
-        if (cfg->use_rs485_sensor)
+        if (sensors_last_rs485_read_ok())
         {
-            if (sensors_last_rs485_read_ok())
-            {
-                ctx->sensor_read_error_count = 0;
-            }
-            else
-            {
-                ctx->sensor_read_error_count++;
-            }
+            ctx->sensor_read_error_count = 0;
         }
         else
         {
-            ctx->sensor_read_error_count = 0;
+            ctx->sensor_read_error_count++;
         }
 
         ESP_LOGI(TAG, "[MEASURE] suelo=%.1f%% | temp=%.1fC",
