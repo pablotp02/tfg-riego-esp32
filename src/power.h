@@ -23,7 +23,8 @@ const char *power_get_wakeup_cause_str(void);
 // Indica si el último arranque proviene de un wakeup por temporizador
 bool power_is_wakeup_from_timer(void);
 
-// Actualiza el nivel de batería simulado y recalcula el modo energético del sistema
+// Actualiza el nivel de batería (real, mediante el INA219, o simulado
+// según ENABLE_BATTERY_SIMULATION) y recalcula el modo energético del sistema
 void power_update_battery_and_mode(system_ctx_t * ctx);
 
 // Convierte el modo energético a una cadena de texto para facilitar logs y depuración
