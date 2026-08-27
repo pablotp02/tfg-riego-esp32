@@ -19,6 +19,6 @@ typedef struct {
 // Devuelve ESP_OK si se obtuvo y parseó correctamente.
 esp_err_t device_config_fetch(device_config_t *out_config);
 
-// Devuelve valores por defecto (los que ya estaban en config.c) para
-// usar como fallback si nunca se ha sincronizado con el backend.
+// Devuelve valores por defecto, empleados como último recurso
+// cuando nunca se ha completado una sincronización con el backend.
 void device_config_get_defaults(device_config_t *out_config);
