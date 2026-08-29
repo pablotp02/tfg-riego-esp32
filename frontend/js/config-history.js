@@ -20,6 +20,30 @@ function formatDate(isoString) {
     });
 }
 
+// Convierte una duración en milisegundos a un texto legible en
+// horas y minutos (ej. "2h 30min", "45min", "3h")
+function formatDurationHM(ms) {
+    const totalMinutes = Math.round(ms / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours === 0) return `${minutes}min`;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}min`;
+}
+
+// Convierte una duración en milisegundos a un texto legible en
+// minutos y segundos (ej. "2min 30s", "45s", "3min")
+function formatDurationMS(ms) {
+    const totalSeconds = Math.round(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes === 0) return `${seconds}s`;
+    if (seconds === 0) return `${minutes}min`;
+    return `${minutes}min ${seconds}s`;
+}
+
 function setOnline(online) {
     statusBadge.textContent = online ? 'Online' : 'Sin datos';
     statusBadge.className = 'status-badge ' + (online ? 'online' : 'offline');
@@ -66,8 +90,8 @@ async function loadConfigHistory() {
                     <td>${cfg.soil_min_temp_c}ºC</td>
                     <td>${cfg.soil_freeze_risk_temp_c}ºC</td>
                     <td>${cfg.irrigation_cooldown_cycles} ciclos</td>
-                    <td>${(cfg.measure_period_ms / 1000)}s</td>
-                    <td>${(cfg.irrigate_time_ms / 1000)}s</td>
+                    <td>${formatDurationHM(cfg.measure_period_ms)}</td>
+                    <td>${formatDurationMS(cfg.irrigate_time_ms)}</td>
                     <td>${lastSyncText}</td>
                 </tr>
             `;
