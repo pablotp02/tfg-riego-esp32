@@ -47,12 +47,12 @@ function toLocalDate(isoString) {
     return new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z');
 }
 
-function formatDate(isoString) {
-    const d = toLocalDate(isoString);
-    return d.toLocaleString('es-ES', {
-        day: '2-digit', month: '2-digit',
-        hour: '2-digit', minute: '2-digit'
-    });
+function formatDate(isoString, includeYear = false) {
+    const options = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' };
+    if (includeYear) {
+        options.year = 'numeric';
+    }
+    return toLocalDate(isoString).toLocaleString('es-ES', options);
 }
 
 function modeToString(mode) {
@@ -181,7 +181,7 @@ async function updateIrrigationTable() {
 
         tbody.innerHTML = data.map(event => `
             <tr>
-                <td>${formatDate(event.recorded_at)}</td>
+                <td>${formatDate(event.recorded_at, true)}</td>
                 <td><span class="badge-${event.irrigated ? 'si' : 'no'}">${event.irrigated ? 'Sí' : 'No'}</span></td>
                 <td>${event.duration_ms ? (event.duration_ms / 1000).toFixed(1) + ' s' : '--'}</td>
                 <td>${event.reason || '--'}</td>
@@ -213,7 +213,7 @@ async function updateAlerts() {
                     <div class="alert-type">⚠️ ${alert.alert_type}</div>
                     <div class="alert-message">${alert.message || ''}</div>
                 </div>
-                <div class="alert-date">${formatDate(alert.recorded_at)}</div>
+                <div class="alert-date">${formatDate(alert.recorded_at, true)}</div>
             </div>
         `).join('');
     } catch (e) {
