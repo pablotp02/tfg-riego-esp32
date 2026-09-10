@@ -14,13 +14,9 @@
 #include "wifi.h"
 #include "http_client.h"
 
-// Rangos válidos (provisionales) para validación
+// Rangos válidos para validación
 #define SOIL_MIN_PCT   (0.0f)
 #define SOIL_MAX_PCT   (100.0f)
-#define TEMP_MIN_C     (-10.0f)
-#define TEMP_MAX_C     (60.0f)
-#define HUM_MIN_PCT    (0.0f)
-#define HUM_MAX_PCT    (100.0f)
 #define PH_MIN         (0.0f)
 #define PH_MAX         (14.0f)
 #define EC_MIN_US_CM   (0.0f)
