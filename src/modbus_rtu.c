@@ -1,5 +1,7 @@
 #include "modbus_rtu.h"
 
+// Convierte un código de estado Modbus a su representación en texto,
+// para mostrarlo en logs de forma legible
 const char *modbus_status_to_str(modbus_status_t st)
 {
     switch(st)
@@ -16,6 +18,9 @@ const char *modbus_status_to_str(modbus_status_t st)
     }
 }
 
+// Traduce un código de estado Modbus al tipo de error estándar de
+// ESP-IDF (esp_err_t) más cercano, para poder propagarlo de forma
+// homogénea junto con el resto de errores del sistema
 esp_err_t modbus_status_to_esp_err(modbus_status_t st)
 {
     switch (st)
@@ -32,6 +37,9 @@ esp_err_t modbus_status_to_esp_err(modbus_status_t st)
     }
 }
 
+// Calcula el CRC16 estándar de Modbus (polinomio 0xA001, valor
+// inicial 0xFFFF), empleado para verificar la integridad de las
+// tramas enviadas y recibidas por el protocolo Modbus RTU
 uint16_t modbus_crc16(const uint8_t *data, size_t len)
 {
     uint16_t crc = 0xFFFF;
@@ -47,6 +55,9 @@ uint16_t modbus_crc16(const uint8_t *data, size_t len)
     return crc;
 }
 
+// Construye una trama Modbus RTU de petición "Read Holding Registers" (función 0x03): dirección de 
+// esclavo, código de función, registro inicial, número de registros a leer, y CRC16 final.
+// Devuelve el número de bytes escritos en out (8), o 0 si los parámetros no son válidos
 size_t modbus_build_read_holding(uint8_t slave_addr, uint16_t start_reg, uint16_t reg_count, uint8_t *out, size_t out_max)
 {
     if (!out || out_max < 8 || reg_count == 0) return 0;
@@ -65,6 +76,9 @@ size_t modbus_build_read_holding(uint8_t slave_addr, uint16_t start_reg, uint16_
     return 8;
 }
 
+// Valida una trama de respuesta Modbus RTU a una petición "Read Holding Registers" (función 0x03),
+// comprobando tanto el caso de respuesta normal como el de excepción Modbus, junto con la
+// dirección de esclavo, la función, el número de bytes de datos, y el CRC16 de la trama recibida
 modbus_status_t modbus_validate_read_holding_resp(const uint8_t *resp, size_t len, uint8_t expected_slave, uint16_t expected_reg_count)
 {
     // Primero comprobamos que el puntero a la trama recibida existe

@@ -65,8 +65,9 @@ static bool validate_sensor_data(const sensor_data_t *d, const char **reason_out
     return true;
 }
 
-// Ahora recibe soil_min_temp_c como parámetro (viene de ctx->device_cfg)
-// en lugar de usar la constante fija SOIL_MIN_TEMP_C de config.h
+// Recibe soil_min_temp_c como parámetro, en vez de usar
+// directamente SOIL_MIN_TEMP_C de config.h, para poder aplicar el
+// valor configurable de la planta activa (ctx->device_cfg)
 static bool decide_irrigation(const sensor_data_t *d,
                                  float soil_start_pct,
                                  float soil_stop_pct,
@@ -103,8 +104,6 @@ static bool decide_irrigation(const sensor_data_t *d,
 
 // Comprueba si el cooldown de riego está activo.
 // Devuelve true si hay que bloquear el riego, false si se puede regar.
-// Usa ctx->device_cfg.irrigation_cooldown_cycles (configurable remotamente)
-// en lugar de la constante fija IRRIGATION_COOLDOWN_CYCLES.
 static bool irrigation_cooldown_active(const system_ctx_t *ctx)
 {
     return (ctx->cycles_since_irrigated < ctx->device_cfg.irrigation_cooldown_cycles);
@@ -208,7 +207,7 @@ void fsm_step(system_ctx_t *ctx)
                 (unsigned long)ctx->device_cfg.irrigation_cooldown_cycles,
                 ctx->device_cfg_synced ? "SI" : "NO");
 
-        // Actualizamos batería simulada y modo energético al inicio de cada ciclo
+        // Actualizamos el nivel de batería y modo energético al inicio de cada ciclo
         power_update_battery_and_mode(ctx);
 
         ESP_LOGI(TAG, "[POWER] battery=%.1f%% | mode=%s",
@@ -422,7 +421,7 @@ void fsm_step(system_ctx_t *ctx)
 
         // Conectar WiFi y enviar el payload al backend.
         // Si falla la conexión o el envío, el sistema continúa sin
-        // bloquearse - se reintentará en el siguiente ciclo con pending_send.
+        // bloquearse: se reintentará en el siguiente ciclo con pending_send.
         bool send_success = false;
 
         esp_err_t wifi_err = wifi_connect();

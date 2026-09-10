@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+// Posibles resultados de una operación Modbus RTU (construcción de
+// petición, validación de respuesta, o conversión a esp_err_t)
 typedef enum {
     MODBUS_OK = 0,
     MODBUS_ERR_NULL,
@@ -33,8 +35,9 @@ uint16_t modbus_crc16(const uint8_t *data, size_t len);
 // Devuelve el número de bytes escritos (8) o 0 si es error
 size_t modbus_build_read_holding(uint8_t slave_addr, uint16_t start_reg, uint16_t reg_count, uint8_t *out, size_t out_max);
 
-// Valida una respuesta a 0x03 (CRC + formato básico)
-// Devuelve true si es OK
+// Valida una respuesta a 0x03 (formato, esclavo, función, bytecount y CRC)
+// Devuelve MODBUS_OK si la trama es válida, o el código de error
+// correspondiente en caso contrario
 modbus_status_t modbus_validate_read_holding_resp(const uint8_t *resp, size_t len, uint8_t expected_slave, uint16_t expected_reg_count);
 
 #ifdef __cplusplus

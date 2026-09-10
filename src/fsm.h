@@ -5,6 +5,7 @@
 #include "power_types.h"
 #include "device_config.h"
 
+// Estados de la FSM
 typedef enum {
     STATE_INIT = 0,
     STATE_SCHEDULE,
@@ -44,6 +45,9 @@ typedef struct {
     uint32_t irrigation_cooldown_cycles;
 } pending_cycle_data_t;
 
+// Contexto completo del sistema, mantenido durante la ejecución de
+// la FSM y persistido parcialmente en memoria RTC entre ciclos de
+// deep sleep
 typedef struct {
     system_state_t state;
     sensor_data_t last;
@@ -60,8 +64,8 @@ typedef struct {
 
     // Cooldown riego: 
     // Cuenta los ciclos transcurridos desde el último riego
-    // Se inicializa a IRRIGATION_COOLDOWN_CYCLES para que el primer ciclo
-    // pueda regar si es necesario
+    // Se inicializa al valor configurado (device_cfg.irrigation_cooldown_cycles)
+    // para que el primer ciclo pueda regar si es necesario
     uint32_t cycles_since_irrigated;
 
     float battery_level_pct;
