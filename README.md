@@ -1,8 +1,9 @@
 # Sistema de Riego Automático con ESP32
 
 Trabajo Fin de Grado — Ingeniería Informática, Universidad de Córdoba
-**Autor:** Pablo Tovar Pareja
-**Tutor:** Dr. D. Joaquín Olivares Bueno
+
+**Autor:** Pablo Tovar Pareja  
+**Tutor:** Dr. D. Joaquín Olivares Bueno  
 
 Sistema de riego automático e inteligente, basado en un dispositivo ESP32 alimentado por batería, que decide de forma autónoma cuándo regar una planta a partir de la monitorización real de las condiciones del suelo (humedad, temperatura, pH y conductividad eléctrica). Incluye una aplicación web para la supervisión, configuración y gestión de alertas del sistema.
 
