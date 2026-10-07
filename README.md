@@ -32,8 +32,8 @@ ESP32 (firmware) ──HTTP──▶ Backend (FastAPI + PostgreSQL) ◀──HTT
 ## Tecnologías
 
 - **Firmware:** C, ESP-IDF 5.1.2, PlatformIO
-- **Backend:** Python 3.12, FastAPI, SQLAlchemy, PostgreSQL
-- **Frontend:** HTML5, CSS3, JavaScript, Chart.js
+- **Backend:** Python 3.12, FastAPI, Uvicorn, SQLAlchemy, PostgreSQL
+- **Frontend:** HTML5, CSS3, JavaScript, Chart.js, Nginx
 - **Despliegue:** Docker y Docker Compose
 
 ## Puesta en marcha
