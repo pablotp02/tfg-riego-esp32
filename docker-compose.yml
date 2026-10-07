@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: tfg_user
-      POSTGRES_PASSWORD: tfg_password
-      POSTGRES_DB: tfg_riego
+      POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER en el .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en el .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB en el .env}
     ports:
       - "5432:5432"
     volumes:
@@ -16,7 +16,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://tfg_user:tfg_password@db:5432/tfg_riego
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       - db
     volumes:
